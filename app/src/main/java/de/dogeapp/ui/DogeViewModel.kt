@@ -63,11 +63,26 @@ class DogeViewModel(app: Application) : AndroidViewModel(app) {
         sendRaw(DogeProtocol.authCheck(phoneId))
     }
 
+    private var pairingTimeout: Job? = null
+
+    /**
+     * Official flow ("Confirm Connection: Press the nose button after you hear the chime."):
+     * the dog chimes after the request and waits for its nose button; then it answers 01 01 04/05.
+     * Until then we stay in PAIRING (other answers just mean "still waiting").
+     */
     fun requestPairing() {
         pairingRequested = true
         _pairState.value = PairState.PAIRING
-        ble.log("Kopplung angefragt – evtl. am Hund bestätigen")
+        ble.log("Kopplung angefragt – nach dem Klingelton Dog-Es Nase drücken 👃")
         sendRaw(DogeProtocol.pairingRequest())
+        pairingTimeout?.cancel()
+        pairingTimeout = viewModelScope.launch {
+            delay(30_000)
+            if (_pairState.value == PairState.PAIRING) {
+                _pairState.value = PairState.NOT_PAIRED
+                ble.log("Kopplung: keine Bestätigung an der Nase – nochmal \"Koppeln\" tippen")
+            }
+        }
     }
 
     // ------------------------------------------------------------------ Driving
@@ -141,8 +156,11 @@ class DogeViewModel(app: Application) : AndroidViewModel(app) {
         when (val r = DogeProtocol.parseAuthReply(data) ?: return) {
             is DogeProtocol.AuthReply.Status -> {
                 if (r.authenticated) {
+                    pairingTimeout?.cancel()
                     _pairState.value = PairState.PAIRED
                     ble.log("Hund: gekoppelt ✔")
+                } else if (_pairState.value == PairState.PAIRING) {
+                    ble.log("Hund wartet auf den Nasen-Knopf …")
                 } else if (!pairingRequested) {
                     requestPairing()
                 } else {
@@ -153,6 +171,7 @@ class DogeViewModel(app: Application) : AndroidViewModel(app) {
             is DogeProtocol.AuthReply.Pairing -> {
                 // Same as the official app (PairingSceneController.OnPairingReceived): an answer
                 // 01 01 04/05 to the pairing request means the dog accepted this phone.
+                pairingTimeout?.cancel()
                 _pairState.value = PairState.PAIRED
                 ble.log("Hund: Kopplung angenommen (Code ${r.code}) ✔")
             }
