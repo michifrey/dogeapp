@@ -70,6 +70,44 @@ class DogeViewModel(app: Application) : AndroidViewModel(app) {
         sendRaw(DogeProtocol.pairingRequest())
     }
 
+    // ------------------------------------------------------------------ Driving
+
+    private val _driveSpeed = MutableStateFlow(2)
+    /** 1 = slow … 3 = fast (the official app's slider sends motor speed 1, 2 or 3). */
+    val driveSpeed: StateFlow<Int> = _driveSpeed.asStateFlow()
+    private val _driving = MutableStateFlow(false)
+    val driving: StateFlow<Boolean> = _driving.asStateFlow()
+
+    fun setDriveSpeed(speed: Int) {
+        _driveSpeed.value = speed.coerceIn(1, 3)
+        if (_driving.value) sendRaw(DogeProtocol.motor(DogeProtocol.MOTOR_DRIVE, _driveSpeed.value))
+    }
+
+    /** Hold-to-drive: start on press … */
+    fun driveStart() {
+        reactionJob?.cancel()
+        _driving.value = true
+        sendRaw(DogeProtocol.motor(DogeProtocol.MOTOR_DRIVE, _driveSpeed.value))
+    }
+
+    /** … stop on release. */
+    fun driveStop() {
+        _driving.value = false
+        sendRaw(DogeProtocol.stopMotors())
+    }
+
+    fun headStart() = sendRaw(DogeProtocol.motor(DogeProtocol.MOTOR_HEAD, 2))
+    fun headStop() = sendRaw(DogeProtocol.stopMotors())
+
+    /**
+     * Experimental: the official app never drives backwards. Try other speed bytes for the drive
+     * motor (e.g. 4…6 or 0xFD…0xFF) to find out whether the motor can reverse.
+     */
+    fun driveRaw(speedByte: Int) {
+        _driving.value = true
+        sendRaw(DogeProtocol.motor(DogeProtocol.MOTOR_DRIVE, speedByte and 0xFF))
+    }
+
     // ------------------------------------------------------------------ Battery & volume
 
     private val _battery = MutableStateFlow<Int?>(null)
@@ -213,7 +251,7 @@ class DogeViewModel(app: Application) : AndroidViewModel(app) {
                 reactionJob?.cancel()
                 sendRaw(DogeProtocol.stopMotors())
             }
-            is VoiceAction.Drive -> moveFor(DogeProtocol.motor(DogeProtocol.MOTOR_DRIVE, 1), action.ms)
+            is VoiceAction.Drive -> moveFor(DogeProtocol.motor(DogeProtocol.MOTOR_DRIVE, _driveSpeed.value), action.ms)
             is VoiceAction.Head -> moveFor(DogeProtocol.motor(DogeProtocol.MOTOR_HEAD, 2), action.ms)
             is VoiceAction.Command -> cfg.command(action.cmd.id)?.let { send(it) } ?: send(action.cmd)
             is VoiceAction.Leds -> setLedColor(action.targets, action.rgb)
@@ -240,7 +278,7 @@ class DogeViewModel(app: Application) : AndroidViewModel(app) {
                     is Step.Say -> say(Conversation.personalize(step.text, name))
                     is Step.Sequence -> { playSequence(step.id); delay(step.waitMs) }
                     is Step.Drive -> {
-                        sendRaw(DogeProtocol.motor(DogeProtocol.MOTOR_DRIVE, 1)); delay(step.ms)
+                        sendRaw(DogeProtocol.motor(DogeProtocol.MOTOR_DRIVE, _driveSpeed.value)); delay(step.ms)
                         sendRaw(DogeProtocol.stopMotors())
                     }
                     is Step.Head -> {
