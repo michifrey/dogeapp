@@ -5,6 +5,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write # to publish the APK to the "latest" release
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,3 +24,18 @@ jobs:
         with:
           name: dog-e-control-debug
           path: app/build/outputs/apk/debug/*.apk
+
+      # Fixed download link for the README:
+      # https://github.com/<owner>/<repo>/releases/latest/download/dog-e-control.apk
+      - name: Publish APK to release "latest"
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk dog-e-control.apk
+          NOTES="Neueste Version von Dog-E Control – Stand ${GITHUB_SHA::7} ($(date -u +'%d.%m.%Y %H:%M') UTC, Branch ${GITHUB_REF_NAME}). Installieren: dog-e-control.apk auf dem Handy/Tablet öffnen."
+          if ! gh release view latest >/dev/null 2>&1; then
+            gh release create latest --title "Dog-E Control (neueste Version)" --notes "$NOTES" --target "$GITHUB_SHA"
+          fi
+          gh release upload latest dog-e-control.apk --clobber
+          gh release edit latest --notes "$NOTES"

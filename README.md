@@ -7,6 +7,21 @@ Sie ist als Ersatz gedacht, weil die offizielle App (`com.wowwee.doge_robot`) f�
 > Dazu gehören Fahren, Kopf bewegen, Stopp, Tricks (Bellen, Schwanzwedeln, Heulen, Singen, Furzen) und die
 > Kopplung. Am echten Hund ist das noch **ungetestet**. Details stehen in [`docs/PROTOKOLL.md`](docs/PROTOKOLL.md).
 
+## ⬇️ Download
+
+**[Neueste Version herunterladen (dog-e-control.apk)](https://github.com/michifrey/dogeapp/releases/latest/download/dog-e-control.apk)**
+
+Den Link auf dem Handy oder Tablet öffnen, die Datei herunterladen und antippen. Beim ersten Mal fragt
+Android, ob Apps aus dieser Quelle installiert werden dürfen – erlauben. Eine ältere Version wird dabei
+einfach ersetzt, Einstellungen bleiben erhalten.
+
+Der Link zeigt immer auf den neuesten Build: Bei jedem Push baut GitHub Actions die App, lässt die Tests
+laufen und legt die APK im Release [„latest“](https://github.com/michifrey/dogeapp/releases/tag/latest) ab.
+
+**Selbst bauen:** Projekt in Android Studio öffnen und *Run* drücken, oder `./gradlew assembleDebug`
+(die APK liegt dann unter `app/build/outputs/apk/debug/`). Voraussetzungen: Android 8.0 oder neuer mit
+Bluetooth LE; zum Bauen JDK 17 und Android SDK (API 35).
+
 ## Funktionen
 
 | Tab | Was er macht |
@@ -39,17 +54,6 @@ wie „Zieh eine Jacke an“; die LEDs leuchten passend (Sonne gelb, Regen blau,
 Hoch- und Querformat.
 
 Die Befehle sind vorbelegt (`data/DogeProtocol.kt`) und lassen sich in der App ändern oder ergänzen.
-
-## APK bekommen
-
-**Ohne Android Studio:** Bei jedem Push baut GitHub Actions die App. Im Tab *Actions* den letzten Lauf von
-„Build APK“ öffnen, das Artefakt `dog-e-control-debug` herunterladen, entpacken und die APK auf dem
-Handy installieren („Installation aus unbekannten Quellen“ erlauben).
-
-**Mit Android Studio:** Projekt öffnen, Handy per USB verbinden und auf *Run* klicken.
-Oder auf der Kommandozeile: `./gradlew assembleDebug`. Die APK liegt dann unter `app/build/outputs/apk/debug/`.
-
-Voraussetzungen: Android 8.0 oder neuer, Bluetooth LE. Für den Build JDK 17 und das Android SDK (API 35).
 
 ## Projektstruktur
 
