@@ -21,6 +21,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import java.util.Calendar
 
@@ -43,30 +48,35 @@ fun greetingText(name: String, hour: Int): String {
 @Composable
 fun GreetingCard(name: String, dogConnected: Boolean, onOpenSettings: () -> Unit, modifier: Modifier = Modifier) {
     val hour = remember { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) }
-    Column(
+    Row(
         modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(16.dp))
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+            .shadow(8.dp, RoundedCornerShape(28.dp))
+            .background(de.dogeapp.ui.theme.FunGradient, RoundedCornerShape(28.dp))
+            .padding(18.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            "${greetingText(name, hour)} 🐶",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-        )
-        Text(
-            when {
-                name.isBlank() -> "Wie heißt du? Trag deinen Namen in den Einstellungen ein."
-                dogConnected -> "Dog-E ist da und freut sich auf dich!"
-                else -> "Dog-E wartet schon auf dich. Schalte ihn ein und verbinde dich."
-            },
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-        )
-        if (name.isBlank()) {
-            TextButton(onClick = onOpenSettings) { Text("Namen eintragen") }
+        WobblyDog(size = 56.sp, emoji = if (hour >= 20 || hour < 6) "😴" else "🐶")
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                greetingText(name, hour),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White,
+            )
+            Text(
+                when {
+                    name.isBlank() -> "Wie heißt du? Trag deinen Namen in den Einstellungen ein."
+                    dogConnected -> "Dog-E ist da und freut sich auf dich! 🎉"
+                    else -> "Dog-E wartet schon auf dich. Schalte ihn ein und verbinde dich."
+                },
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.White.copy(alpha = 0.95f),
+            )
+            if (name.isBlank()) {
+                TextButton(onClick = onOpenSettings) { Text("✏️ Namen eintragen", color = Color.White) }
+            }
         }
     }
 }

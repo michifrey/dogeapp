@@ -1,6 +1,16 @@
 package de.dogeapp.ui
 
 import android.Manifest
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.runtime.remember
+import de.dogeapp.ui.theme.CoolGradient
+import de.dogeapp.ui.theme.FunGradient
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Slider
 import androidx.compose.material3.TextButton
@@ -124,29 +134,34 @@ fun ControlScreen(vm: DogeViewModel, onOpenSettings: () -> Unit, modifier: Modif
         }
         val right: @Composable () -> Unit = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Tricks", style = MaterialTheme.typography.titleMedium)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    config.commands.filterNot { it.id in DogeConfig.DRIVE_IDS }.forEach { cmd ->
-                        FilledTonalButton(
+                SectionTitle("🎪", "Tricks")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    config.commands.filterNot { it.id in DogeConfig.DRIVE_IDS }.forEachIndexed { i, cmd ->
+                        FunButton(
+                            emoji = emojiFor(cmd.id),
+                            label = plainLabel(cmd.label),
+                            index = i,
                             onClick = { vm.send(cmd) },
                             enabled = cmd.hex.isNotBlank(),
-                            modifier = if (wide) Modifier.height(64.dp) else Modifier,
-                        ) {
-                            Text(cmd.label, style = if (wide) MaterialTheme.typography.titleMedium else MaterialTheme.typography.labelLarge)
-                        }
+                            minWidth = if (wide) 130.dp else 100.dp,
+                            big = wide,
+                        )
                     }
                 }
-                Text("Gespräch", style = MaterialTheme.typography.titleMedium)
+                SectionTitle("💬", "Gespräch")
                 Text(
                     "Sag es mit Sprachsteuerung oder tippe drauf – Dog-E antwortet.",
                     style = MaterialTheme.typography.bodySmall,
                 )
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Conversation.REACTIONS.forEach { r ->
-                        OutlinedButton(
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Conversation.REACTIONS.forEachIndexed { i, r ->
+                        FunButton(
+                            emoji = emojiFor(r.id),
+                            label = r.label,
+                            index = i + 3,
                             onClick = { vm.runReaction(r) },
-                            modifier = if (wide) Modifier.height(56.dp) else Modifier,
-                        ) { Text("💬 ${r.label}") }
+                            minWidth = if (wide) 120.dp else 96.dp,
+                        )
                     }
                 }
                 SequenceTester(vm)
@@ -195,7 +210,7 @@ private fun VoicePanel(vm: DogeViewModel) {
                 tint = if (listening) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.width(8.dp))
-            Text("Sprachsteuerung", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            Text("🎤 Sprachsteuerung", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             Switch(checked = on, onCheckedChange = { want ->
                 if (!want) vm.setVoice(false)
                 else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) vm.setVoice(true)
@@ -218,7 +233,7 @@ private fun SequenceTester(vm: DogeViewModel) {
     var text by rememberSaveable { mutableStateOf("106") }
     val id = text.trim().let { if (it.startsWith("0x", true)) it.drop(2).toIntOrNull(16) else it.toIntOrNull() }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("Sequenz ausprobieren", style = MaterialTheme.typography.titleMedium)
+        SectionTitle("🔢", "Sequenz ausprobieren")
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedButton(onClick = { id?.let { text = (it - 1).coerceAtLeast(0).toString() } }) { Text("−") }
             Spacer(Modifier.width(4.dp))
@@ -265,29 +280,45 @@ private fun Hint(text: String) {
 @Composable
 private fun HoldButton(cmd: CommandDef?, icon: ImageVector, vm: DogeViewModel, size: Dp, hold: Boolean = true) {
     val enabled = cmd != null && cmd.hex.isNotBlank()
+    var pressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(if (pressed) 0.88f else 1f, spring(dampingRatio = 0.45f), label = "hold")
+    val brush = when {
+        !hold -> Brush.linearGradient(listOf(Color(0xFFEF4444), Color(0xFFF97316)))
+        cmd?.id == DogeConfig.HEAD -> CoolGradient
+        else -> FunGradient
+    }
     Box(
         Modifier
+            .scale(scale)
             .size(size)
             .alpha(if (enabled) 1f else 0.35f)
-            .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(16.dp))
+            .shadow(if (pressed) 2.dp else 10.dp, RoundedCornerShape(28.dp))
+            .background(brush, RoundedCornerShape(28.dp))
             .pointerInput(cmd, enabled, hold) {
                 if (!enabled) return@pointerInput
                 detectTapGestures(onPress = {
+                    pressed = true
                     if (hold) {
                         vm.press(cmd!!)
                         tryAwaitRelease()
                         vm.release()
                     } else {
                         vm.send(cmd!!)
+                        tryAwaitRelease()
                     }
+                    pressed = false
                 })
             },
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(icon, contentDescription = cmd?.label, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-            Spacer(Modifier.size(2.dp))
-            Text(cmd?.label ?: "", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Icon(icon, contentDescription = cmd?.label, tint = Color.White, modifier = Modifier.size(size * 0.4f))
+            Text(
+                cmd?.label ?: "",
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+            )
         }
     }
 }

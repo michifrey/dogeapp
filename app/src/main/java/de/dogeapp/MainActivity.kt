@@ -52,6 +52,12 @@ import de.dogeapp.ui.ControlScreen
 import de.dogeapp.ui.DogeViewModel
 import de.dogeapp.ui.ExplorerScreen
 import de.dogeapp.ui.LedScreen
+import de.dogeapp.ui.TopHeader
+import de.dogeapp.ui.theme.DogeTheme
+import de.dogeapp.ui.theme.backgroundBrush
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.graphics.Color
 
 private enum class Tab(val label: String, val icon: ImageVector) {
     CONNECT("Verbinden", Icons.Filled.Bluetooth),
@@ -77,7 +83,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
+            DogeTheme {
                 var granted by remember { mutableStateOf(hasPermissions()) }
                 val launcher = rememberLauncherForActivityResult(
                     ActivityResultContracts.RequestMultiplePermissions()
@@ -103,6 +109,7 @@ private fun PermissionScreen(onRequest: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        Text("🐶", style = MaterialTheme.typography.displayLarge)
         Text("Dog-E Control", style = MaterialTheme.typography.headlineMedium)
         Text(
             "Die App braucht die Bluetooth-Berechtigung, um den Hund zu finden und zu steuern.",
@@ -135,10 +142,11 @@ private fun App(onEnableBluetooth: () -> Unit) {
         }
     }
 
+    Box(Modifier.fillMaxSize().background(backgroundBrush())) {
     if (tablet) {
-        Scaffold { padding ->
+        Scaffold(containerColor = Color.Transparent, topBar = { TopHeader(vm) }) { padding ->
             Row(Modifier.padding(padding).fillMaxSize()) {
-                NavigationRail {
+                NavigationRail(containerColor = Color.Transparent) {
                     Tab.entries.forEach { t ->
                         NavigationRailItem(
                             selected = tab == t,
@@ -153,6 +161,8 @@ private fun App(onEnableBluetooth: () -> Unit) {
         }
     } else {
         Scaffold(
+            containerColor = Color.Transparent,
+            topBar = { TopHeader(vm) },
             bottomBar = {
                 NavigationBar {
                     Tab.entries.forEach { t ->
@@ -166,5 +176,6 @@ private fun App(onEnableBluetooth: () -> Unit) {
                 }
             },
         ) { padding -> content(Modifier.padding(padding).fillMaxSize()) }
+    }
     }
 }

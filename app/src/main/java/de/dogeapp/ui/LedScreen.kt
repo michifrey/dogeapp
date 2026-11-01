@@ -98,7 +98,7 @@ fun LedScreen(vm: DogeViewModel, modifier: Modifier = Modifier) {
                     onChange = { h, s -> hue = h; sat = s; sendColor() },
                     modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth().aspectRatio(1f),
                 )
-                Text("Helligkeit", style = MaterialTheme.typography.labelLarge)
+                Text("☀️ Helligkeit", style = MaterialTheme.typography.labelLarge)
                 Slider(
                     value = value,
                     onValueChange = { value = it; sendColor() },
@@ -109,14 +109,14 @@ fun LedScreen(vm: DogeViewModel, modifier: Modifier = Modifier) {
         }
         val controls: @Composable () -> Unit = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Welche Lichter?", style = MaterialTheme.typography.titleMedium)
+                SectionTitle("💡", "Welche Lichter?")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     GROUPS.forEachIndexed { i, (label, _) ->
                         FilterChip(selected = group == i, onClick = { group = i }, label = { Text(label) })
                     }
                 }
                 DogPreview(leds)
-                Text("Schnellfarben", style = MaterialTheme.typography.titleMedium)
+                SectionTitle("🎨", "Schnellfarben")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     PALETTE.forEach { (name, rgb) ->
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {

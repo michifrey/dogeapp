@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Window theme: purple status bar to match the gradient header. -->
+    <style name="Theme.DogE" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#FF7C3AED</item>
+        <item name="android:navigationBarColor">#FFFFFBFF</item>
+        <item name="android:windowBackground">#FFF5EEFF</item>
+        <item name="android:colorAccent">#FF7C3AED</item>
+    </style>
+</resources>

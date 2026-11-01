@@ -66,7 +66,7 @@ fun ConnectScreen(
                 OutlinedButton(onClick = { vm.ble.stopScan() }) { Text("Scan stoppen") }
                 CircularProgressIndicator(Modifier.size(24.dp))
             } else {
-                Button(onClick = { vm.ble.startScan() }) { Text("Nach Hund suchen") }
+                Button(onClick = { vm.ble.startScan() }) { Text("🔍 Nach Dog-E suchen") }
             }
             if (state != ConnState.DISCONNECTED) {
                 OutlinedButton(onClick = { vm.ble.disconnect() }) { Text("Trennen") }
@@ -99,7 +99,7 @@ private fun DeviceCard(d: FoundDevice, highlight: Boolean, onClick: () -> Unit) 
     ) {
         Column(Modifier.padding(12.dp)) {
             Row {
-                Text(d.name ?: "(ohne Namen)", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text((if (highlight) "🐶 " else "") + (d.name ?: "(ohne Namen)"), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 Spacer(Modifier.width(8.dp))
                 Text("${d.rssi} dBm")
             }

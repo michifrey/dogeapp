@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.DogE" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">#FF4C1D95</item>
+        <item name="android:navigationBarColor">#FF17121F</item>
+        <item name="android:windowBackground">#FF17121F</item>
+        <item name="android:colorAccent">#FFC4B5FD</item>
+    </style>
+</resources>
