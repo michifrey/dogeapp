@@ -6,14 +6,15 @@ plugins {
 
 android {
     namespace = "de.dogeapp"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "de.dogeapp"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        targetSdk = 36
+        // Every CI build gets a higher version code, so updates install over the old version.
+        versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()?.plus(100) ?: 2
+        versionName = "0.2.0"
     }
 
     buildTypes {
