@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Single-color version for Android "themed icons": face details are cut out (evenOdd). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- ears -->
+    <path android:fillColor="#FF000000"
+        android:pathData="M38,36 C30,32 23,39 23,50 C23,59 26,66 31,65 C35,64 36,56 38,48 Z" />
+    <path android:fillColor="#FF000000"
+        android:pathData="M70,36 C78,32 85,39 85,50 C85,59 82,66 77,65 C73,64 72,56 70,48 Z" />
+    <!-- head with eyes, nose and mouth as holes -->
+    <path android:fillColor="#FF000000" android:fillType="evenOdd"
+        android:pathData="M54,31 C69,31 79,41 79,55 C79,69 69,79 54,79 C39,79 29,69 29,55 C29,41 39,31 54,31 Z
+            M44,46 C40.5,46 39,49 39,52 C39,55 40.5,58 44,58 C47.5,58 49,55 49,52 C49,49 47.5,46 44,46 Z
+            M64,46 C60.5,46 59,49 59,52 C59,55 60.5,58 64,58 C67.5,58 69,55 69,52 C69,49 67.5,46 64,46 Z
+            M50,61 C50,63.5 52.5,65.5 54,65.5 C55.5,65.5 58,63.5 58,61 C58,59.5 50,59.5 50,61 Z
+            M46,66.5 C49,71.5 59,71.5 62,66.5 C60,68 48,68 46,66.5 Z" />
+</vector>
