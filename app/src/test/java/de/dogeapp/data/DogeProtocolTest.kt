@@ -39,4 +39,19 @@ class DogeProtocolTest {
         )
         assertEquals(null, DogeProtocol.parseAuthReply(Hex.parse("FF 03 0A 00 0D")!!))
     }
+
+    @Test
+    fun ledPacket() {
+        val leds = mapOf(
+            LedTarget.CHEST to 0x112233, LedTarget.TAIL to 0x445566,
+            LedTarget.LEFT_EYE to 0xFF0000, LedTarget.RIGHT_EYE to 0x00FF00,
+            LedTarget.LEFT_FOOT to 0x0000FF, LedTarget.RIGHT_FOOT to 0x010203,
+        )
+        val p = DogeProtocol.setLeds(leds, deciseconds = 36000)
+        assertEquals(24, p.size)
+        assertEquals(
+            "FF 16 06 00 FF 00 FF 00 00 11 22 33 01 02 03 00 00 FF 44 55 66 A0 8C B0",
+            hex(p),
+        )
+    }
 }

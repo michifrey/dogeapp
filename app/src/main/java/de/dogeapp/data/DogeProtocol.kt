@@ -22,6 +22,7 @@ object DogeProtocol {
 
     const val CMD_AUTH = 0x01
     const val CMD_PLAY_SEQUENCE = 0x05
+    const val CMD_SET_LED = 0x06
     const val CMD_MOTOR = 0x0A
 
     const val MOTOR_DRIVE = 1
@@ -57,6 +58,23 @@ object DogeProtocol {
         return packet(CMD_PLAY_SEQUENCE, *payload.toIntArray())
     }
 
+    /**
+     * Sets all six LEDs at once. Colors are 0xRRGGBB. [deciseconds] is how long the colors stay
+     * (the official app uses 36000 = 1 hour). Byte order in the packet (from SendSetLed):
+     * right eye, left eye, chest, right foot, left foot, tail – each R, G, B – then the duration LE16.
+     */
+    fun setLeds(leds: Map<LedTarget, Int>, deciseconds: Int = 36000): ByteArray {
+        val order = listOf(
+            LedTarget.RIGHT_EYE, LedTarget.LEFT_EYE, LedTarget.CHEST,
+            LedTarget.RIGHT_FOOT, LedTarget.LEFT_FOOT, LedTarget.TAIL,
+        )
+        val payload = order.flatMap { t ->
+            val c = leds[t] ?: 0
+            listOf((c shr 16) and 0xFF, (c shr 8) and 0xFF, c and 0xFF)
+        } + listOf(deciseconds and 0xFF, (deciseconds shr 8) and 0xFF)
+        return packet(CMD_SET_LED, *payload.toIntArray())
+    }
+
     /** "Am I already paired?" – sent right after connecting, with a 6-byte ID identifying this phone. */
     fun authCheck(phoneId: ByteArray): ByteArray =
         packet(CMD_AUTH, 0, *phoneId.map { it.toInt() and 0xFF }.toIntArray())
@@ -77,4 +95,13 @@ object DogeProtocol {
         return if (type == 1 && (value == 4 || value == 5)) AuthReply.Pairing(value)
         else AuthReply.Status(authenticated = value == 1)
     }
+}
+
+enum class LedTarget(val label: String) {
+    CHEST("Brust"),
+    TAIL("Schwanz"),
+    LEFT_EYE("Auge links"),
+    RIGHT_EYE("Auge rechts"),
+    LEFT_FOOT("Fuß links"),
+    RIGHT_FOOT("Fuß rechts"),
 }

@@ -1,5 +1,17 @@
 package de.dogeapp.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MicNone
+import androidx.compose.material3.Switch
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -54,44 +66,105 @@ fun ControlScreen(vm: DogeViewModel, modifier: Modifier = Modifier) {
     val log by vm.ble.log.collectAsStateWithLifecycle()
     val connected = state == ConnState.READY
 
-    Column(
-        modifier.padding(16.dp).verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        if (!connected) {
-            Hint("Nicht verbunden. Zuerst im Tab \"Verbinden\" den Hund (\"Mint Dog\") auswählen.")
+    BoxWithConstraints(modifier.padding(16.dp)) {
+        // Tablets (e.g. Samsung Galaxy Tab) get two columns and bigger buttons.
+        val wide = maxWidth >= 700.dp
+        val buttonSize = if (wide) 140.dp else 96.dp
+
+        val left: @Composable () -> Unit = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                if (!connected) {
+                    Hint("Nicht verbunden. Zuerst im Tab \"Verbinden\" den Hund (\"Mint Dog\") auswählen.")
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Kopplung: ${pair.label()}")
+                        if (pair == PairState.NOT_PAIRED || pair == PairState.UNKNOWN) {
+                            OutlinedButton(onClick = { vm.requestPairing() }) { Text("Koppeln") }
+                        }
+                    }
+                }
+                // Hold to move, release sends "stop" – same as the official app.
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    HoldButton(config.command(DogeConfig.FORWARD), Icons.Filled.KeyboardArrowUp, vm, buttonSize)
+                    HoldButton(config.command(DogeConfig.HEAD), Icons.Filled.Pets, vm, buttonSize)
+                    HoldButton(config.command(DogeConfig.STOP), Icons.Filled.Stop, vm, buttonSize, hold = false)
+                }
+                Text("Gedrückt halten zum Fahren bzw. Kopf bewegen", style = MaterialTheme.typography.bodySmall)
+                VoicePanel(vm)
+            }
+        }
+        val right: @Composable () -> Unit = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("Tricks", style = MaterialTheme.typography.titleMedium)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    config.commands.filterNot { it.id in DogeConfig.DRIVE_IDS }.forEach { cmd ->
+                        FilledTonalButton(
+                            onClick = { vm.send(cmd) },
+                            enabled = cmd.hex.isNotBlank(),
+                            modifier = if (wide) Modifier.height(64.dp) else Modifier,
+                        ) {
+                            Text(cmd.label, style = if (wide) MaterialTheme.typography.titleMedium else MaterialTheme.typography.labelLarge)
+                        }
+                    }
+                }
+                SequenceTester(vm)
+                log.lastOrNull()?.let {
+                    Text("${it.time}  ${it.text}", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+
+        if (wide) {
+            Row(horizontalArrangement = Arrangement.spacedBy(32.dp)) {
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) { left() }
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) { right() }
+            }
         } else {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Kopplung: ${pair.label()}")
-                if (pair == PairState.NOT_PAIRED || pair == PairState.UNKNOWN) {
-                    OutlinedButton(onClick = { vm.requestPairing() }) { Text("Koppeln") }
-                }
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                left()
+                right()
             }
         }
+    }
+}
 
-        // Hold to move, release sends "stop" – same as the official app.
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            HoldButton(config.command(DogeConfig.FORWARD), Icons.Filled.KeyboardArrowUp, vm)
-            HoldButton(config.command(DogeConfig.HEAD), Icons.Filled.Pets, vm)
-            HoldButton(config.command(DogeConfig.STOP), Icons.Filled.Stop, vm, hold = false)
+/** Switch for voice control: the tablet listens and the dog reacts to spoken commands. */
+@Composable
+private fun VoicePanel(vm: DogeViewModel) {
+    val context = LocalContext.current
+    val on by vm.voiceOn.collectAsStateWithLifecycle()
+    val listening by vm.voiceListening.collectAsStateWithLifecycle()
+    val heard by vm.voiceHeard.collectAsStateWithLifecycle()
+    val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        if (ok) vm.setVoice(true)
+    }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                if (listening) Icons.Filled.Mic else Icons.Filled.MicNone,
+                contentDescription = null,
+                tint = if (listening) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.width(8.dp))
+            Text("Sprachsteuerung", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            Switch(checked = on, onCheckedChange = { want ->
+                if (!want) vm.setVoice(false)
+                else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) vm.setVoice(true)
+                else micPermission.launch(Manifest.permission.RECORD_AUDIO)
+            })
         }
-        Text("Gedrückt halten zum Fahren bzw. Kopf bewegen", style = MaterialTheme.typography.bodySmall)
-
-        Text("Tricks", style = MaterialTheme.typography.titleMedium)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            config.commands.filterNot { it.id in DogeConfig.DRIVE_IDS }.forEach { cmd ->
-                FilledTonalButton(onClick = { vm.send(cmd) }, enabled = cmd.hex.isNotBlank()) {
-                    Text(cmd.label)
-                }
-            }
-        }
-
-        SequenceTester(vm)
-
-        log.lastOrNull()?.let {
-            Text("${it.time}  ${it.text}", style = MaterialTheme.typography.bodySmall)
-        }
+        if (heard.isNotBlank()) Text(heard, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            "Sag z. B.: \"Bell!\", \"Furz mal!\", \"Sing\", \"Heul\", \"Wedel\", \"Komm her\", \"Kopf\", \"Stopp\", " +
+                "\"Augen blau\", \"Licht rot\", \"Regenbogen\", \"Licht aus\" – oder den Namen eines eigenen Knopfs.",
+            style = MaterialTheme.typography.bodySmall,
+        )
     }
 }
 
@@ -146,11 +219,11 @@ private fun Hint(text: String) {
 }
 
 @Composable
-private fun HoldButton(cmd: CommandDef?, icon: ImageVector, vm: DogeViewModel, hold: Boolean = true) {
+private fun HoldButton(cmd: CommandDef?, icon: ImageVector, vm: DogeViewModel, size: Dp, hold: Boolean = true) {
     val enabled = cmd != null && cmd.hex.isNotBlank()
     Box(
         Modifier
-            .size(96.dp)
+            .size(size)
             .alpha(if (enabled) 1f else 0.35f)
             .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(16.dp))
             .pointerInput(cmd, enabled, hold) {

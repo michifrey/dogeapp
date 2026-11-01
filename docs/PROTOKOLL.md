@@ -23,6 +23,7 @@ und der ARM-Maschinencode (`libil2cpp.so`), mit den Skripten in `tools/reverse/`
 | Fahren (vorwärts) | `FF 05 0A 01 01 01 12` | Fahr-Schieber: `SendMotorSpeedCommand(1, 1)` |
 | Kopf bewegen | `FF 05 0A 02 01 02 14` | Kopf-Knopf: `SendMotorSpeedCommand(2, 2)` |
 | Sequenz abspielen | `FF <len> 05 01 <anzahl> <id lo> <id hi> … <cs>` | `SendPlaySequences` |
+| LEDs setzen | `FF 16 06 <RGB rechtes Auge> <RGB linkes Auge> <RGB Brust> <RGB rechter Fuß> <RGB linker Fuß> <RGB Schwanz> <Dauer lo> <Dauer hi> <cs>` | `SendSetLed` – Dauer in Zehntelsekunden, die App nutzt 36000 (1 h) |
 | Kopplung prüfen | `FF 09 01 00 <6 Byte Handy-ID> <cs>` | `RequestAuthentication` (nach dem Verbinden) |
 | Kopplung anfordern | `FF 03 01 01 05` | `RequestPairing` (wenn nicht gekoppelt) |
 
@@ -33,8 +34,7 @@ Tanz). Sie lassen sich in der App unter *Steuern → Sequenz ausprobieren* durch
 Antwort auf die Kopplungs-Prüfung: `FF .. 01 00 <status> ..`, `status = 1` bedeutet gekoppelt.
 Antwort auf eine Kopplungs-Anfrage: `FF .. 01 01 <4|5> ..`.
 
-Weitere bekannte Befehlsgruppen (noch nicht eingebaut): LEDs (`SendSetLed`, Ziele Brust/Schwanz/Augen/Füße,
-12 Farben), Lautstärke (`SendSetVolume`), Akku (`RequestBatteryLevel`), Firmware-Version, Schwanz-Animationen,
+Weitere bekannte Befehlsgruppen (noch nicht eingebaut): Lautstärke (`SendSetVolume`), Akku (`RequestBatteryLevel`), Firmware-Version, Schwanz-Animationen,
 Spiele und Profile. Die Adressen findest du mit `tools/reverse/addrs.py`, den Code mit `tools/reverse/dis.py`.
 
 ### Analyse selbst wiederholen

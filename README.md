@@ -13,8 +13,17 @@ Sie ist als Ersatz gedacht, weil die offizielle App (`com.wowwee.doge_robot`) f�
 |-----|--------------|
 | **Verbinden** | Sucht BLE-Geräte, hebt den Hund hervor und verbindet sich. |
 | **Steuern** | Fahren und Kopf (gedrückt halten, loslassen = Stopp), Trick-Knöpfe und ein Sequenz-Tester, um weitere Tricks und Sounds per Nummer zu finden. |
+| **Licht** | Farbrad + Helligkeit für alle sechs LEDs (Augen, Brust, Schwanz, Füße) einzeln oder zusammen, Schnellfarben und Regenbogen. |
 | **Explorer** | Zeigt alle Services und Characteristics. Du kannst rohe Hex-Bytes senden, Werte lesen und den Steuer-Kanal festlegen. Alle Benachrichtigungen des Hundes landen im Log, das du kopieren kannst. |
 | **Befehle** | Befehlstabelle bearbeiten (Name + Hex-Bytes), Befehle hinzufügen und testen, Konfiguration als JSON exportieren und importieren. |
+
+**Sprachsteuerung** (Tab *Steuern*): Schalter einschalten, Mikrofon erlauben, dann z. B. „Bell!“, „Furz mal!“,
+„Komm her“, „Stopp“, „Augen blau“, „Licht aus“ oder „Regenbogen“ sagen. Die App hört dauerhaft zu, solange
+sie offen ist, und nutzt die Spracherkennung des Geräts (bei Samsung meist Google-Spracheingabe; ohne
+Internet braucht es das deutsche Offline-Sprachpaket).
+
+**Tablets** (z. B. Samsung Galaxy Tab): Navigation an der Seite, zweispaltige Ansicht, größere Tasten;
+Hoch- und Querformat.
 
 Die Befehle sind vorbelegt (`data/DogeProtocol.kt`) und lassen sich in der App ändern oder ergänzen.
 
@@ -38,7 +47,8 @@ app/src/main/java/de/dogeapp/
   data/DogeProtocol.kt   Dog-E-Protokoll: Paketformat, Prüfsumme, Befehle, Kopplung
   data/DogeConfig.kt     Konfiguration (Kanal, Befehlstabelle), Speicherung als JSON
   data/Hex.kt            Hex-Strings parsen und formatieren
-  ui/                    Compose-Screens (Verbinden, Steuern, Explorer, Befehle)
+  ui/                    Compose-Screens (Verbinden, Steuern, Licht, Explorer, Befehle)
+  voice/                 Spracherkennung (Dauer-Zuhören) und Sprachbefehle
 tools/doge_explorer.py   Gleicher Explorer für den PC (Python + bleak)
 tools/reverse/           Skripte, mit denen das Protokoll aus der Original-App gelesen wurde
 docs/PROTOKOLL.md        Das Protokoll und wie es gefunden wurde

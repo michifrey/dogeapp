@@ -13,11 +13,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Gamepad
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
@@ -25,6 +27,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
@@ -37,6 +41,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -46,10 +51,12 @@ import de.dogeapp.ui.ConnectScreen
 import de.dogeapp.ui.ControlScreen
 import de.dogeapp.ui.DogeViewModel
 import de.dogeapp.ui.ExplorerScreen
+import de.dogeapp.ui.LedScreen
 
 private enum class Tab(val label: String, val icon: ImageVector) {
     CONNECT("Verbinden", Icons.Filled.Bluetooth),
     CONTROL("Steuern", Icons.Filled.Gamepad),
+    LIGHT("Licht", Icons.Filled.Lightbulb),
     EXPLORER("Explorer", Icons.Filled.Search),
     COMMANDS("Befehle", Icons.Filled.Tune),
 }
@@ -109,33 +116,54 @@ private fun PermissionScreen(onRequest: () -> Unit) {
 private fun App(onEnableBluetooth: () -> Unit) {
     val vm: DogeViewModel = viewModel()
     var tab by rememberSaveable { mutableStateOf(Tab.CONNECT) }
+    // Tablets (>= 600 dp wide, e.g. Samsung Galaxy Tab) get a side rail instead of the bottom bar.
+    val tablet = LocalConfiguration.current.screenWidthDp >= 600
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar {
-                Tab.entries.forEach { t ->
-                    NavigationBarItem(
-                        selected = tab == t,
-                        onClick = { tab = t },
-                        icon = { Icon(t.icon, contentDescription = t.label) },
-                        label = { Text(t.label) },
-                    )
-                }
-            }
-        },
-    ) { padding ->
-        val mod = Modifier.padding(padding).fillMaxSize()
+    val content: @Composable (Modifier) -> Unit = { mod ->
         when (tab) {
             Tab.CONNECT -> ConnectScreen(
                 vm,
                 onEnableBluetooth,
-                // Without a known control channel the Explorer is the useful next step.
                 onConnected = { tab = if (vm.config.value.hasWriteTarget) Tab.CONTROL else Tab.EXPLORER },
                 modifier = mod,
             )
             Tab.CONTROL -> ControlScreen(vm, mod)
+            Tab.LIGHT -> LedScreen(vm, mod)
             Tab.EXPLORER -> ExplorerScreen(vm, mod)
             Tab.COMMANDS -> CommandsScreen(vm, mod)
         }
+    }
+
+    if (tablet) {
+        Scaffold { padding ->
+            Row(Modifier.padding(padding).fillMaxSize()) {
+                NavigationRail {
+                    Tab.entries.forEach { t ->
+                        NavigationRailItem(
+                            selected = tab == t,
+                            onClick = { tab = t },
+                            icon = { Icon(t.icon, contentDescription = t.label) },
+                            label = { Text(t.label) },
+                        )
+                    }
+                }
+                content(Modifier.weight(1f).fillMaxSize())
+            }
+        }
+    } else {
+        Scaffold(
+            bottomBar = {
+                NavigationBar {
+                    Tab.entries.forEach { t ->
+                        NavigationBarItem(
+                            selected = tab == t,
+                            onClick = { tab = t },
+                            icon = { Icon(t.icon, contentDescription = t.label) },
+                            label = { Text(t.label) },
+                        )
+                    }
+                }
+            },
+        ) { padding -> content(Modifier.padding(padding).fillMaxSize()) }
     }
 }
