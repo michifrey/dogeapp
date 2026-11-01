@@ -16,11 +16,30 @@ android {
         versionName = "0.2.0"
     }
 
+    // Fixed signing key so every build installs as an update over the previous one.
+    // The key is NOT in the repo: CI decodes it from the GitHub secrets DOGE_KEYSTORE_BASE64 /
+    // DOGE_KEYSTORE_PASSWORD into DOGE_KEYSTORE_FILE. Without it the normal debug key is used.
+    val keystoreFile = System.getenv("DOGE_KEYSTORE_FILE")?.let { file(it) }?.takeIf { it.exists() }
+    val keystorePassword = System.getenv("DOGE_KEYSTORE_PASSWORD")
+    signingConfigs {
+        if (keystoreFile != null && !keystorePassword.isNullOrEmpty()) {
+            create("doge") {
+                storeFile = keystoreFile
+                storePassword = keystorePassword
+                keyAlias = "doge"
+                keyPassword = keystorePassword
+            }
+        }
+    }
+    val signing = signingConfigs.findByName("doge") ?: signingConfigs.getByName("debug")
+
     buildTypes {
+        debug {
+            signingConfig = signing
+        }
         release {
             isMinifyEnabled = false
-            // Für private Nutzung mit dem Debug-Key signieren, damit die APK direkt installierbar ist.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signing
         }
     }
     compileOptions {

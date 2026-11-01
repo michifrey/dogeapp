@@ -15,8 +15,17 @@ Den Link auf dem Handy oder Tablet öffnen, die Datei herunterladen und antippen
 Android, ob Apps aus dieser Quelle installiert werden dürfen – erlauben. Eine ältere Version wird dabei
 einfach ersetzt, Einstellungen bleiben erhalten.
 
+> **Einmalig deinstallieren:** Frühere Builds hatten jedes Mal eine andere Signatur, deshalb meldet Android
+> beim Update „App nicht installiert“. Alte App einmal deinstallieren, dann die neue installieren. Sobald die
+> Signatur-Secrets (siehe unten) gesetzt sind, installieren sich neue Versionen als normales Update.
+
 Der Link zeigt immer auf den neuesten Build: Bei jedem Push baut GitHub Actions die App, lässt die Tests
 laufen und legt die APK im Release [„latest“](https://github.com/michifrey/dogeapp/releases/tag/latest) ab.
+
+**Feste Signatur:** Der Build signiert mit einem eigenen Schlüssel aus den Repository-Secrets
+`DOGE_KEYSTORE_BASE64` (Keystore als Base64) und `DOGE_KEYSTORE_PASSWORD` (*Settings → Secrets and
+variables → Actions*). Der Schlüssel liegt bewusst nicht im öffentlichen Repo. Fehlen die Secrets, wird mit
+einem zufälligen Debug-Schlüssel signiert.
 
 **Selbst bauen:** Projekt in Android Studio öffnen und *Run* drücken, oder `./gradlew assembleDebug`
 (die APK liegt dann unter `app/build/outputs/apk/debug/`). Voraussetzungen: Android 8.0 oder neuer mit

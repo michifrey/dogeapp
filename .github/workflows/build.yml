@@ -18,6 +18,21 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
+      # Same signature for every build (so updates install). Set the repository secrets
+      # DOGE_KEYSTORE_BASE64 and DOGE_KEYSTORE_PASSWORD; without them the debug key is used.
+      - name: Decode signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.DOGE_KEYSTORE_BASE64 }}
+          KEYSTORE_PW: ${{ secrets.DOGE_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ] && [ -n "$KEYSTORE_PW" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/doge.keystore"
+            echo "DOGE_KEYSTORE_FILE=$RUNNER_TEMP/doge.keystore" >> "$GITHUB_ENV"
+            echo "DOGE_KEYSTORE_PASSWORD=$KEYSTORE_PW" >> "$GITHUB_ENV"
+            echo "Signing with the fixed Dog-E key"
+          else
+            echo "::warning::DOGE_KEYSTORE_* secrets missing – signing with a random debug key (updates will not install over older builds)"
+          fi
       - name: Unit tests and debug APK
         run: ./gradlew --no-daemon testDebugUnitTest assembleDebug
       - uses: actions/upload-artifact@v4
