@@ -20,6 +20,9 @@
         android:name="android.permission.ACCESS_FINE_LOCATION"
         android:maxSdkVersion="30" />
 
+    <!-- Jokes download and weather (Open-Meteo) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Voice control -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-feature

@@ -12,6 +12,10 @@ sealed interface Step {
     data class Light(val rgb: Int, val targets: Set<LedTarget> = LedTarget.entries.toSet()) : Step
     data object Rainbow : Step
     data class Wait(val ms: Long) : Step
+    /** Tell a joke (downloaded or built-in), then laugh. */
+    data object Joke : Step
+    /** Fetch and tell the current weather for the town from the settings. */
+    data object Weather : Step
 }
 
 /**
@@ -111,12 +115,14 @@ object Conversation {
         ),
         Reaction(
             "joke", "Witz",
-            stems = listOf("witz", "lustig"),
-            steps = listOf(
-                Step.Say("Was macht ein Hund im Kino? Er schaut sich einen Wau-Wau-Film an!"),
-                Step.Sequence(DogeProtocol.SEQ_FART),
-                Step.Say("Hihi, Entschuldigung!"),
-            ),
+            stems = listOf("witz", "lustig", "lachen"),
+            steps = listOf(Step.Joke),
+        ),
+        Reaction(
+            "weather", "Wetter",
+            stems = listOf("wetter", "regnet", "schneit", "draußen", "draussen", "temperatur"),
+            phrases = listOf("wie warm", "wie kalt", "scheint die sonne", "brauche ich eine jacke"),
+            steps = listOf(Step.Weather),
         ),
         Reaction(
             "night", "Gute Nacht",

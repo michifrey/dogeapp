@@ -12,6 +12,9 @@ import de.dogeapp.data.DogeConfig
 import de.dogeapp.data.DogeProtocol
 import de.dogeapp.data.Hex
 import de.dogeapp.data.LedTarget
+import de.dogeapp.net.JokeRepository
+import de.dogeapp.net.WeatherApi
+import de.dogeapp.net.WeatherText
 import de.dogeapp.voice.Conversation
 import de.dogeapp.voice.DogVoice
 import de.dogeapp.voice.Reaction
@@ -54,30 +57,6 @@ class DogeViewModel(app: Application) : AndroidViewModel(app) {
             }
     }
 
-    init {
-        // After every connect: ask the dog whether this phone is paired (like the official app does).
-        viewModelScope.launch {
-            ble.state.collectLatest { s ->
-                if (s == ConnState.READY) {
-                    pairingRequested = false
-                    delay(500) // let the notification subscriptions finish first
-                    checkPairing()
-                    // Battery: ask now and then every minute while connected.
-                    while (true) {
-                        delay(1500)
-                        requestBattery()
-                        delay(58_500)
-                    }
-                } else if (s == ConnState.DISCONNECTED) {
-                    _pairState.value = PairState.UNKNOWN
-                    _battery.value = null
-                }
-            }
-        }
-        viewModelScope.launch {
-            ble.notifications.collect { (_, data) -> onDogData(data) }
-        }
-    }
 
     fun checkPairing() {
         _pairState.value = PairState.CHECKING
@@ -273,8 +252,76 @@ class DogeViewModel(app: Application) : AndroidViewModel(app) {
                     is Step.Light -> setLedColor(step.targets, step.rgb)
                     Step.Rainbow -> rainbow()
                     is Step.Wait -> delay(step.ms)
+                    Step.Joke -> tellJoke()
+                    Step.Weather -> tellWeather()
                 }
             }
+        }
+    }
+
+    // ------------------------------------------------------------------ Internet: jokes & weather
+
+    private val jokes = JokeRepository(app)
+    private val _jokesStatus = MutableStateFlow(jokesStatusText())
+    val jokesStatus: StateFlow<String> = _jokesStatus.asStateFlow()
+    private val _weatherText = MutableStateFlow("")
+    val weatherText: StateFlow<String> = _weatherText.asStateFlow()
+
+    private fun jokesStatusText(): String {
+        val n = jokes.all.size
+        val t = jokes.lastUpdate
+        return if (t == 0L) "$n Witze (eingebaut)"
+        else "$n Witze, aktualisiert " + java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.GERMANY).format(java.util.Date(t))
+    }
+
+    /** Downloads new jokes from the URL in the settings. */
+    fun refreshJokes() {
+        viewModelScope.launch {
+            _jokesStatus.value = "Lade Witze …"
+            _jokesStatus.value = runCatching { jokes.refresh(_config.value.jokesUrl) }
+                .fold({ jokesStatusText() }, { "Fehler beim Laden: ${it.message ?: it.javaClass.simpleName}" })
+        }
+    }
+
+    private suspend fun tellJoke() {
+        if (jokes.isStale()) runCatching { jokes.refresh(_config.value.jokesUrl) }.onSuccess { _jokesStatus.value = jokesStatusText() }
+        val j = jokes.next()
+        ble.log("Witz: ${j.question} – ${j.answer}")
+        _voiceHeard.value = "😄 ${j.question} ${j.answer}"
+        say(j.question)
+        if (j.answer.isNotBlank()) {
+            delay(1200) // a little pause to think
+            say(j.answer)
+        }
+        playSequence(if (Math.random() < 0.5) DogeProtocol.SEQ_FART else DogeProtocol.SEQ_BARK)
+        delay(1500)
+        say("Hihi!")
+        playSequence(DogeProtocol.SEQ_WAG_TAIL)
+    }
+
+    private suspend fun tellWeather() {
+        val cfg = _config.value
+        if (cfg.city.isBlank()) {
+            say("Ich weiß noch nicht, wo du wohnst. Trag deinen Ort in den Einstellungen ein!")
+            _weatherText.value = "Kein Ort eingetragen (Einstellungen)"
+            return
+        }
+        val result = runCatching {
+            val place = WeatherApi.findPlace(cfg.city) ?: error("Ort \"${cfg.city}\" nicht gefunden")
+            WeatherApi.current(place)
+        }
+        result.onSuccess { w ->
+            val text = WeatherText.sentence(w, cfg.childName)
+            _weatherText.value = text
+            _voiceHeard.value = "🌦 $text"
+            ble.log("Wetter: $text")
+            setLedColor(LedTarget.entries.toSet(), WeatherText.ledColor(w.code, w.isDay))
+            say(text)
+            playSequence(DogeProtocol.SEQ_WAG_TAIL)
+        }.onFailure {
+            _weatherText.value = "Wetter nicht verfügbar: ${it.message}"
+            ble.log("Wetter-Fehler: ${it.message}")
+            say("Wuff, ich kann gerade nicht nach draußen schauen. Ist das Internet an?")
         }
     }
 
@@ -372,6 +419,33 @@ class DogeViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         ble.write(c.serviceUuid, c.uuid, bytes, withoutResponse = c.canWriteNoResponse && !c.canWrite)
+    }
+
+    // Runs last on purpose: viewModelScope starts collecting immediately (Main.immediate),
+    // so every property used below must already be initialised.
+    init {
+        // After every connect: ask the dog whether this phone is paired (like the official app does).
+        viewModelScope.launch {
+            ble.state.collectLatest { s ->
+                if (s == ConnState.READY) {
+                    pairingRequested = false
+                    delay(500) // let the notification subscriptions finish first
+                    checkPairing()
+                    // Battery: ask now and then every minute while connected.
+                    while (true) {
+                        delay(1500)
+                        requestBattery()
+                        delay(58_500)
+                    }
+                } else if (s == ConnState.DISCONNECTED) {
+                    _pairState.value = PairState.UNKNOWN
+                    _battery.value = null
+                }
+            }
+        }
+        viewModelScope.launch {
+            ble.notifications.collect { (_, data) -> onDogData(data) }
+        }
     }
 
     override fun onCleared() {

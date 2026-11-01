@@ -28,6 +28,13 @@ Das Tablet antwortet mit einer Hundestimme (Sprachausgabe, abschaltbar in den Ei
 bellt, wedelt, fährt oder leuchtet dazu. Die Reaktionen stehen in `voice/Conversation.kt` und lassen sich
 leicht erweitern. Ohne Sprache: Im Tab *Steuern* unter „Gespräch“ antippen.
 
+**Internet: Witze & Wetter** – „Erzähl einen Witz“ holt kindgerechte Hundewitze aus
+[`content/witze.json`](content/witze.json) (hier im Projekt; neue Witze einfach dort eintragen, die App lädt
+sie einmal am Tag bzw. über *Einstellungen → Witze aktualisieren*). Ohne Internet gibt es ein paar
+eingebaute Witze. „Wie ist das Wetter?“ sagt das aktuelle Wetter für den Wohnort aus den Einstellungen
+(Daten von [Open-Meteo](https://open-meteo.com), kostenlos, ohne Konto und ohne GPS) mit einem Tipp
+wie „Zieh eine Jacke an“; die LEDs leuchten passend (Sonne gelb, Regen blau, Schnee eisblau …).
+
 **Tablets** (z. B. Samsung Galaxy Tab): Navigation an der Seite, zweispaltige Ansicht, größere Tasten;
 Hoch- und Querformat.
 

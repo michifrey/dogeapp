@@ -43,6 +43,8 @@ fun CommandsScreen(vm: DogeViewModel, modifier: Modifier = Modifier) {
     val config by vm.config.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var importOpen by remember { mutableStateOf(false) }
+    val jokesStatus by vm.jokesStatus.collectAsStateWithLifecycle()
+    val weatherText by vm.weatherText.collectAsStateWithLifecycle()
 
     Column(
         modifier.padding(16.dp).verticalScroll(rememberScrollState()),
@@ -70,6 +72,39 @@ fun CommandsScreen(vm: DogeViewModel, modifier: Modifier = Modifier) {
             )
             Text("Dog-E spricht (Sprachausgabe des Tablets bei Gesprächen)")
         }
+
+        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+        Text("Internet: Wetter & Witze", style = MaterialTheme.typography.titleMedium)
+        OutlinedTextField(
+            value = config.city,
+            onValueChange = { v -> vm.updateConfig { it.copy(city = v.take(60)) } },
+            label = { Text("Wohnort fürs Wetter") },
+            placeholder = { Text("z. B. Zürich") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { vm.runReaction(de.dogeapp.voice.Conversation.REACTIONS.first { it.id == "weather" }) }) {
+                Text("Wetter testen")
+            }
+        }
+        if (weatherText.isNotBlank()) Text(weatherText, style = MaterialTheme.typography.bodySmall)
+        OutlinedTextField(
+            value = config.jokesUrl,
+            onValueChange = { v -> vm.updateConfig { it.copy(jokesUrl = v.trim()) } },
+            label = { Text("Witze-Datei (Adresse)") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { vm.refreshJokes() }) { Text("Witze aktualisieren") }
+            Text(jokesStatus, style = MaterialTheme.typography.bodySmall)
+        }
+        Text(
+            "Die Witze kommen aus content/witze.json im GitHub-Projekt – dort kannst du selbst neue, " +
+                "kindgerechte Witze eintragen. Die App lädt sie einmal am Tag automatisch.",
+            style = MaterialTheme.typography.bodySmall,
+        )
 
         HorizontalDivider(Modifier.padding(vertical = 8.dp))
         Text("Steuer-Kanal", style = MaterialTheme.typography.titleMedium)

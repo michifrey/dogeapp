@@ -205,7 +205,7 @@ private fun VoicePanel(vm: DogeViewModel) {
         if (speaking) Text("🗣 Dog-E spricht …", style = MaterialTheme.typography.bodyMedium)
         else if (heard.isNotBlank()) Text(heard, style = MaterialTheme.typography.bodyMedium)
         Text(
-            "Sag z. B.: \"Hallo!\", \"Wollen wir Ball spielen?\", \"Wie geht's?\", \"Gute Nacht\", \"Bell!\", \"Furz mal!\", \"Sing\", \"Heul\", \"Wedel\", \"Komm her\", \"Kopf\", \"Stopp\", " +
+            "Sag z. B.: \"Hallo!\", \"Erzähl einen Witz\", \"Wie ist das Wetter?\", \"Wollen wir Ball spielen?\", \"Wie geht's?\", \"Gute Nacht\", \"Bell!\", \"Furz mal!\", \"Sing\", \"Heul\", \"Wedel\", \"Komm her\", \"Kopf\", \"Stopp\", " +
                 "\"Augen blau\", \"Licht rot\", \"Lauter\", \"Leiser\", \"Regenbogen\", \"Licht aus\" – oder den Namen eines eigenen Knopfs.",
             style = MaterialTheme.typography.bodySmall,
         )

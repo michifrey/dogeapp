@@ -58,6 +58,9 @@ class VoiceCommandsTest {
         assertEquals("love", reaction("Ich hab dich lieb"))
         assertEquals("night", reaction("Gute Nacht"))
         assertEquals("bye", reaction("Tschüss"))
+        assertEquals("joke", reaction("Erzähl mir einen Witz"))
+        assertEquals("weather", reaction("Wie ist das Wetter?"))
+        assertEquals("weather", reaction("Regnet es draußen?"))
     }
 
     @Test

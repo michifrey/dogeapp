@@ -35,6 +35,10 @@ data class DogeConfig(
     val childName: String = "",
     /** In conversations the tablet speaks for the dog (text-to-speech). */
     val dogSpeaks: Boolean = true,
+    /** Town for the weather report, e.g. "Zürich". */
+    val city: String = "",
+    /** Where new jokes are downloaded from (JSON, see content/witze.json). */
+    val jokesUrl: String = de.dogeapp.net.JokeRepository.DEFAULT_URL,
 ) {
     val hasWriteTarget: Boolean get() = writeServiceUuid.isNotBlank() && writeCharUuid.isNotBlank()
 
@@ -87,6 +91,8 @@ class ConfigRepository(context: Context) {
         put("nameHint", c.nameHint)
         put("childName", c.childName)
         put("dogSpeaks", c.dogSpeaks)
+        put("city", c.city)
+        put("jokesUrl", c.jokesUrl)
         put("commands", JSONArray().apply {
             c.commands.forEach {
                 put(JSONObject().put("id", it.id).put("label", it.label).put("hex", it.hex))
@@ -111,6 +117,8 @@ class ConfigRepository(context: Context) {
             commands = cmds,
             childName = o.optString("childName", ""),
             dogSpeaks = o.optBoolean("dogSpeaks", true),
+            city = o.optString("city", ""),
+            jokesUrl = o.optString("jokesUrl", defaults.jokesUrl).ifBlank { defaults.jokesUrl },
         )
     }
 
