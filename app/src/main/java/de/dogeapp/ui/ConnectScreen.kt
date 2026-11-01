@@ -81,7 +81,7 @@ fun ConnectScreen(
 
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(devices, key = { it.address }) { d ->
-                DeviceCard(d, highlight = d.name?.contains(config.nameHint, ignoreCase = true) == true) {
+                DeviceCard(d, highlight = d.name?.contains(config.nameHint, ignoreCase = true) == true || de.dogeapp.ble.dogRank(d) <= 1) {
                     waitingForConnect = true
                     vm.ble.connect(d.address)
                 }
@@ -99,7 +99,7 @@ private fun DeviceCard(d: FoundDevice, highlight: Boolean, onClick: () -> Unit) 
     ) {
         Column(Modifier.padding(12.dp)) {
             Row {
-                Text((if (highlight) "🐶 " else "") + (d.name ?: "(ohne Namen)"), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text((if (highlight) "🐶 " else "") + (d.name ?: if (de.dogeapp.ble.looksLikeDog(d)) "(ohne Namen – vermutlich Dog-E)" else "(ohne Namen)"), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 Spacer(Modifier.width(8.dp))
                 Text("${d.rssi} dBm")
             }

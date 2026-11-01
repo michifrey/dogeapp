@@ -27,6 +27,18 @@ import java.util.Date
 import java.util.Locale
 import java.util.UUID
 
+/** 0 = name looks like the dog, 1 = offers the dog's BLE services, 2 = other named, 3 = unnamed. */
+fun dogRank(d: FoundDevice): Int = when {
+    d.name?.let { n -> n.contains("dog", true) || n.contains("mint", true) } == true -> 0
+    looksLikeDog(d) -> 1
+    d.name != null -> 2
+    else -> 3
+}
+
+/** The Dog-E uses services FFE0 (notify) and FFE5 (write); some firmwares advertise them. */
+fun looksLikeDog(d: FoundDevice): Boolean =
+    d.serviceUuids.any { it.startsWith("0000ffe0", true) || it.startsWith("0000ffe5", true) }
+
 data class FoundDevice(
     val address: String,
     val name: String?,
@@ -132,7 +144,7 @@ class BleManager(private val context: Context) {
             )
             _devices.update { list ->
                 (list.filterNot { it.address == device.address } + device)
-                    .sortedWith(compareBy<FoundDevice> { it.name == null }.thenByDescending { it.rssi })
+                    .sortedWith(compareBy<FoundDevice> { dogRank(it) }.thenByDescending { it.rssi })
             }
         }
 
