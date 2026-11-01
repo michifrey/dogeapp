@@ -1,17 +1,16 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
 android {
     namespace = "de.dogeapp"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "de.dogeapp"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
         // Every CI build gets a higher version code, so updates install over the old version.
         versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()?.plus(100) ?: 2
         versionName = "0.2.0"
@@ -27,9 +26,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
