@@ -35,11 +35,10 @@ Bluetooth LE; zum Bauen JDK 17 und Android SDK (API 35).
 
 | Tab | Was er macht |
 |-----|--------------|
-| **Verbinden** | Sucht BLE-Geräte, hebt den Hund hervor und verbindet sich. |
-| **Steuern** | Begrüßung mit dem Namen des Kindes, Akkustand, Lautstärke, Fahren und Kopf (gedrückt halten, loslassen = Stopp), Trick-Knöpfe und ein Sequenz-Tester, um weitere Tricks und Sounds per Nummer zu finden. |
+| **Spielen** | Für das Kind: Begrüßung, Fahren (gedrückt halten) mit 🐢/🐕/🚀-Geschwindigkeit, Kopf, großer STOPP, Tricks, Gespräch (Hallo, Ball, Witz, Wetter …), Sprachsteuerung, Lautstärke. Ohne Verbindung ein großer „Dog-E verbinden“-Knopf. |
 | **Licht** | Farbrad + Helligkeit für alle sechs LEDs (Augen, Brust, Schwanz, Füße) einzeln oder zusammen, Schnellfarben und Regenbogen. |
-| **Explorer** | Zeigt alle Services und Characteristics. Du kannst rohe Hex-Bytes senden, Werte lesen und den Steuer-Kanal festlegen. Alle Benachrichtigungen des Hundes landen im Log, das du kopieren kannst. |
-| **Einstellungen** | Name des Kindes für die Begrüßung, Befehlstabelle bearbeiten (Name + Hex-Bytes), Befehle hinzufügen und testen, Konfiguration als JSON exportieren und importieren. |
+| **Verbinden** | Suchen, Verbinden, Kopplung (nach dem Klingelton Dog-Es Nase drücken), Akkustand. Der Hund steht oben, andere Geräte sind eingeklappt. |
+| **Einstellungen** | Name des Kindes, Sprachausgabe, Wohnort fürs Wetter, Witze-Datei. Unter **„Für Eltern / Experten“**: Explorer (BLE-Log), Rückwärts-Test, Sequenz-Tester, Steuer-Kanal, Befehlstabelle, Import/Export. |
 
 **Sprachsteuerung** (Tab *Steuern*): Schalter einschalten, Mikrofon erlauben, dann z. B. „Bell!“, „Furz mal!“,
 „Komm her“, „Stopp“, „Lauter“, „Leiser“, „Augen blau“, „Licht aus“ oder „Regenbogen“ sagen. Die App hört dauerhaft zu, solange

@@ -47,9 +47,12 @@ fun ExplorerScreen(vm: DogeViewModel, modifier: Modifier = Modifier) {
     val config by vm.config.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    Column(modifier.padding(horizontal = 12.dp)) {
+    Column(modifier.padding(horizontal = 16.dp)) {
         if (chars.isEmpty()) {
-            Text("Nicht verbunden: im Tab \"Verbinden\" ein Gerät auswählen.", Modifier.padding(vertical = 12.dp))
+            HintBox(
+                "Nicht verbunden: zuerst im Tab \"Verbinden\" ein Gerät auswählen.",
+                Modifier.padding(top = 8.dp),
+            )
         }
         LazyColumn(
             Modifier.weight(1f).padding(top = 8.dp),
