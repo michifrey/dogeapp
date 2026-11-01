@@ -157,10 +157,11 @@ fun ConnectScreen(
         if (dogs.isNotEmpty() || scanning) {
             item(key = "dogsTitle") { SectionTitle("🐶", "Gefundene Hunde", itemMod.padding(top = 8.dp)) }
         }
-        if (dogs.isEmpty() && scanning) {
+        if (dogs.isEmpty() && (scanning || devices.isNotEmpty())) {
             item(key = "dogsEmpty") {
                 Text(
-                    "Noch kein Dog-E gefunden … Ist er eingeschaltet?",
+                    if (scanning) "Noch kein Dog-E gefunden … Ist er eingeschaltet?"
+                    else "Kein Dog-E gefunden. Hund aus- und wieder einschalten, Original-App überall schließen, dann nochmal suchen.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = itemMod,
@@ -171,24 +172,18 @@ fun ConnectScreen(
             DogDeviceCard(d, enabled = canConnect, onConnect = { connect(d) }, modifier = itemMod)
         }
 
+        // Other Bluetooth devices are hidden by default; only a small link for experts.
         if (others.isNotEmpty()) {
             item(key = "othersTitle") {
-                Row(
-                    itemMod
-                        .clip(MaterialTheme.shapes.medium)
-                        .clickable { othersOpen = !othersOpen }
-                        .heightIn(min = 48.dp)
-                        .padding(horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+                TextButton(onClick = { othersOpen = !othersOpen }, modifier = itemMod.padding(top = 8.dp)) {
                     Text(
-                        "Andere Geräte (${others.size})",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.weight(1f),
+                        if (othersOpen) "Andere Bluetooth-Geräte ausblenden"
+                        else "Andere Bluetooth-Geräte anzeigen (${others.size})",
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                     Icon(
                         if (othersOpen) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                        contentDescription = if (othersOpen) "Einklappen" else "Ausklappen",
+                        contentDescription = null,
                     )
                 }
             }

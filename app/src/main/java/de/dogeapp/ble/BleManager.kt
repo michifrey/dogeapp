@@ -154,6 +154,8 @@ class BleManager(private val context: Context) {
         }
     }
 
+    private val scanTimeout = Runnable { stopScan() }
+
     fun startScan() {
         val scanner = adapter?.bluetoothLeScanner ?: run {
             log("Bluetooth ist aus oder nicht verfügbar")
@@ -165,10 +167,12 @@ class BleManager(private val context: Context) {
         scanner.startScan(null, settings, scanCallback)
         _scanning.value = true
         log("Scan gestartet")
-        main.postDelayed({ stopScan() }, SCAN_DURATION_MS)
+        main.removeCallbacks(scanTimeout) // an old timer must not stop this new scan early
+        main.postDelayed(scanTimeout, SCAN_DURATION_MS)
     }
 
     fun stopScan() {
+        main.removeCallbacks(scanTimeout)
         if (!_scanning.value) return
         runCatching { adapter?.bluetoothLeScanner?.stopScan(scanCallback) }
         _scanning.value = false
@@ -177,48 +181,114 @@ class BleManager(private val context: Context) {
 
     // ---------------------------------------------------------------- Connection
 
-    fun connect(address: String) {
-        stopScan()
-        disconnect()
-        val device: BluetoothDevice = adapter?.getRemoteDevice(address) ?: return
-        _connectedName.value = device.name ?: address
-        _state.value = ConnState.CONNECTING
-        log("Verbinde mit ${device.name ?: "?"} ($address) …")
-        gatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
+    // Connection bookkeeping (all touched on the main thread only).
+    private var targetAddress: String? = null
+    private var manualDisconnect = false
+    private var connectAttempt = 0
+    private var reconnects = 0
+    private var servicesRequested = false
+    private val connectTimeout = Runnable {
+        if (_state.value == ConnState.CONNECTING || _state.value == ConnState.DISCOVERING) {
+            log("Zeitüberschreitung beim Verbinden")
+            retryOrGiveUp("Timeout")
+        }
     }
 
-    fun disconnect() {
+    fun connect(address: String) {
+        stopScan()
+        closeGatt()
+        targetAddress = address
+        manualDisconnect = false
+        connectAttempt = 0
+        reconnects = 0
+        openGatt()
+    }
+
+    private fun openGatt() {
+        val address = targetAddress ?: return
+        val device: BluetoothDevice = adapter?.getRemoteDevice(address) ?: return
+        connectAttempt++
+        servicesRequested = false
+        _connectedName.value = device.name ?: address
+        _state.value = ConnState.CONNECTING
+        log("Verbinde mit ${device.name ?: "?"} ($address) … Versuch $connectAttempt")
+        gatt = device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
+        main.removeCallbacks(connectTimeout)
+        main.postDelayed(connectTimeout, CONNECT_TIMEOUT_MS)
+    }
+
+    /** Status 133 / timeouts are common on Android (esp. Samsung): close cleanly and try again. */
+    private fun retryOrGiveUp(reason: String) {
+        closeGatt()
+        if (!manualDisconnect && connectAttempt < MAX_CONNECT_ATTEMPTS) {
+            log("$reason – neuer Versuch in 1 s")
+            _state.value = ConnState.CONNECTING
+            main.postDelayed({ if (!manualDisconnect) openGatt() }, 1000)
+        } else {
+            log("Verbindung fehlgeschlagen ($reason). Hund aus- und einschalten und nochmal versuchen.")
+            _state.value = ConnState.DISCONNECTED
+        }
+    }
+
+    private fun closeGatt() {
+        main.removeCallbacks(connectTimeout)
         gatt?.let {
-            log("Trenne Verbindung")
-            it.disconnect()
-            it.close()
+            runCatching { it.disconnect() }
+            runCatching { it.close() }
         }
         gatt = null
         queue.clear()
         opRunning = false
+        currentOpToken = null
         _chars.value = emptyList()
+    }
+
+    fun disconnect() {
+        manualDisconnect = true
+        if (gatt != null) log("Trenne Verbindung")
+        closeGatt()
         _state.value = ConnState.DISCONNECTED
+    }
+
+    private fun startServiceDiscovery(g: BluetoothGatt) {
+        if (servicesRequested || g != gatt) return
+        servicesRequested = true
+        // Samsung stacks are more reliable with a short pause before discovery.
+        main.postDelayed({ if (g == gatt && !g.discoverServices()) retryOrGiveUp("Service-Suche nicht gestartet") }, 600)
     }
 
     private val gattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
             main.post {
-                if (g != gatt) return@post
-                when (newState) {
-                    BluetoothProfile.STATE_CONNECTED -> {
-                        log("Verbunden (status $status), suche Services …")
+                if (g != gatt) {
+                    // Callback from an old connection: just make sure it is closed.
+                    if (newState == BluetoothProfile.STATE_DISCONNECTED) runCatching { g.close() }
+                    return@post
+                }
+                when {
+                    newState == BluetoothProfile.STATE_CONNECTED && status == BluetoothGatt.GATT_SUCCESS -> {
+                        log("Verbunden, suche Services …")
                         _state.value = ConnState.DISCOVERING
-                        // Larger MTU helps if the dog sends long notifications; discovery follows in onMtuChanged.
-                        if (!g.requestMtu(185)) g.discoverServices()
+                        // Larger MTU helps with long notifications; discovery starts in onMtuChanged
+                        // (or right away if the request is refused).
+                        if (!g.requestMtu(185)) startServiceDiscovery(g)
+                        else main.postDelayed({ startServiceDiscovery(g) }, 1500) // if onMtuChanged never comes
                     }
-                    BluetoothProfile.STATE_DISCONNECTED -> {
-                        log("Verbindung getrennt (status $status)")
-                        g.close()
-                        gatt = null
-                        queue.clear()
-                        opRunning = false
-                        _chars.value = emptyList()
-                        _state.value = ConnState.DISCONNECTED
+                    newState == BluetoothProfile.STATE_DISCONNECTED || status != BluetoothGatt.GATT_SUCCESS -> {
+                        val wasReady = _state.value == ConnState.READY
+                        log("Verbindung getrennt (Status $status${statusHint(status)})")
+                        if (manualDisconnect) {
+                            closeGatt(); _state.value = ConnState.DISCONNECTED
+                        } else if (wasReady && reconnects < MAX_RECONNECTS) {
+                            // The dog dropped out during play: reconnect automatically.
+                            reconnects++
+                            connectAttempt = 0
+                            retryOrGiveUp("Hund weg")
+                        } else if (!wasReady) {
+                            retryOrGiveUp("Status $status")
+                        } else {
+                            closeGatt(); _state.value = ConnState.DISCONNECTED
+                        }
                     }
                 }
             }
@@ -226,17 +296,22 @@ class BleManager(private val context: Context) {
 
         override fun onMtuChanged(g: BluetoothGatt, mtu: Int, status: Int) {
             main.post {
+                if (g != gatt) return@post
                 log("MTU = $mtu")
-                g.discoverServices()
+                startServiceDiscovery(g) // ignored if discovery already started (MTU can change twice)
             }
         }
 
         override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
             main.post {
-                if (status != BluetoothGatt.GATT_SUCCESS) {
-                    log("Service-Suche fehlgeschlagen (status $status)")
+                if (g != gatt || _state.value == ConnState.READY) return@post
+                if (status != BluetoothGatt.GATT_SUCCESS || g.services.isEmpty()) {
+                    log("Service-Suche fehlgeschlagen (Status $status)")
+                    retryOrGiveUp("Service-Suche")
                     return@post
                 }
+                main.removeCallbacks(connectTimeout)
+                connectAttempt = 0
                 val list = g.services.flatMap { s ->
                     s.characteristics.map { c -> CharInfo(s.uuid.toString(), c.uuid.toString(), c.properties) }
                 }
@@ -248,6 +323,9 @@ class BleManager(private val context: Context) {
                         val info = list.first { it.serviceUuid == s.uuid.toString() && it.uuid == c.uuid.toString() }
                         log("   ↳ ${shortUuid(info.uuid)}  [${info.propertyLabel}]")
                     }
+                }
+                if (g.getService(UUID.fromString("0000ffe5-0000-1000-8000-00805f9b34fb")) == null) {
+                    log("⚠ Dieses Gerät hat den Dog-E-Steuerkanal FFE5 nicht – ist es wirklich der Hund?")
                 }
                 _state.value = ConnState.READY
                 // Subscribe to everything that can notify, so we see every answer from the dog.
@@ -346,9 +424,18 @@ class BleManager(private val context: Context) {
         val type = if (withoutResponse) BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
         else BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
         enqueue {
+            if (g != gatt) return@enqueue false
             log("▶ ${shortUuid(char)}: ${Hex.format(data)}")
             val ok = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                g.writeCharacteristic(c, data, type) == BluetoothGatt.GATT_SUCCESS
+                var rc = g.writeCharacteristic(c, data, type)
+                // The stack can still be busy with the previous write: retry briefly instead of dropping it.
+                var tries = 0
+                while (rc == WRITE_BUSY && tries < 5) {
+                    Thread.sleep(15)
+                    rc = g.writeCharacteristic(c, data, type)
+                    tries++
+                }
+                rc == BluetoothGatt.GATT_SUCCESS
             } else {
                 @Suppress("DEPRECATION")
                 run {
@@ -397,6 +484,21 @@ class BleManager(private val context: Context) {
         private const val SCAN_DURATION_MS = 15_000L
         private const val OP_TIMEOUT_MS = 2_000L
         private const val MAX_LOG = 500
+        private const val CONNECT_TIMEOUT_MS = 15_000L
+        private const val MAX_CONNECT_ATTEMPTS = 3
+        private const val MAX_RECONNECTS = 3
+        /** BluetoothStatusCodes.ERROR_GATT_WRITE_REQUEST_BUSY (API 33+). */
+        private const val WRITE_BUSY = 201
+
+        private fun statusHint(status: Int) = when (status) {
+            0 -> ""
+            8 -> " – Verbindung abgelaufen/außer Reichweite"
+            19 -> " – vom Hund beendet"
+            22 -> " – vom Handy beendet"
+            62 -> " – Verbindungsaufbau fehlgeschlagen"
+            133 -> " – Android-Bluetooth-Fehler, neuer Versuch"
+            else -> ""
+        }
 
         /** "0000ffe5-0000-1000-8000-00805f9b34fb" → "FFE5"; custom 128-bit UUIDs stay as they are. */
         fun shortUuid(uuid: String): String {
