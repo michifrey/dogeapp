@@ -113,12 +113,10 @@ class DogeViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             is DogeProtocol.AuthReply.Pairing -> {
-                ble.log("Hund: Kopplungs-Antwort ${r.code}")
-                // The dog accepted the pairing request: check again with our ID.
-                viewModelScope.launch {
-                    delay(300)
-                    checkPairing()
-                }
+                // Same as the official app (PairingSceneController.OnPairingReceived): an answer
+                // 01 01 04/05 to the pairing request means the dog accepted this phone.
+                _pairState.value = PairState.PAIRED
+                ble.log("Hund: Kopplung angenommen (Code ${r.code}) ✔")
             }
         }
     }
