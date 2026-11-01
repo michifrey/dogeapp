@@ -12,6 +12,10 @@ import de.dogeapp.data.DogeConfig
 import de.dogeapp.data.DogeProtocol
 import de.dogeapp.data.Hex
 import de.dogeapp.data.LedTarget
+import de.dogeapp.voice.Conversation
+import de.dogeapp.voice.DogVoice
+import de.dogeapp.voice.Reaction
+import de.dogeapp.voice.Step
 import de.dogeapp.voice.VoiceAction
 import de.dogeapp.voice.VoiceCommands
 import de.dogeapp.voice.VoiceController
@@ -229,6 +233,7 @@ class DogeViewModel(app: Application) : AndroidViewModel(app) {
         when (action) {
             VoiceAction.Stop -> {
                 holdJob?.cancel()
+                reactionJob?.cancel()
                 sendRaw(DogeProtocol.stopMotors())
             }
             is VoiceAction.Drive -> moveFor(DogeProtocol.motor(DogeProtocol.MOTOR_DRIVE, 1), action.ms)
@@ -237,6 +242,53 @@ class DogeViewModel(app: Application) : AndroidViewModel(app) {
             is VoiceAction.Leds -> setLedColor(action.targets, action.rgb)
             VoiceAction.Rainbow -> rainbow()
             is VoiceAction.Volume -> setVolume(_volume.value + action.delta)
+            is VoiceAction.React -> runReaction(action.reaction)
+        }
+    }
+
+    // ------------------------------------------------------------------ Conversation
+
+    private val dogVoice = DogVoice(app)
+    private var reactionJob: Job? = null
+    private val _speaking = MutableStateFlow(false)
+    val speaking: StateFlow<Boolean> = _speaking.asStateFlow()
+
+    /** Plays a little conversation: the tablet talks for the dog, the dog moves, sounds and lights up. */
+    fun runReaction(r: Reaction) {
+        reactionJob?.cancel()
+        reactionJob = viewModelScope.launch {
+            val name = _config.value.childName
+            for (step in r.steps) {
+                when (step) {
+                    is Step.Say -> say(Conversation.personalize(step.text, name))
+                    is Step.Sequence -> { playSequence(step.id); delay(step.waitMs) }
+                    is Step.Drive -> {
+                        sendRaw(DogeProtocol.motor(DogeProtocol.MOTOR_DRIVE, 1)); delay(step.ms)
+                        sendRaw(DogeProtocol.stopMotors())
+                    }
+                    is Step.Head -> {
+                        sendRaw(DogeProtocol.motor(DogeProtocol.MOTOR_HEAD, 2)); delay(step.ms)
+                        sendRaw(DogeProtocol.stopMotors())
+                    }
+                    is Step.Light -> setLedColor(step.targets, step.rgb)
+                    Step.Rainbow -> rainbow()
+                    is Step.Wait -> delay(step.ms)
+                }
+            }
+        }
+    }
+
+    /** Speaks while the microphone is paused, so the recognizer does not hear the tablet itself. */
+    private suspend fun say(text: String) {
+        if (!_config.value.dogSpeaks || !dogVoice.isReady) return
+        val wasListening = _voiceOn.value
+        if (wasListening) voice.stop()
+        _speaking.value = true
+        try {
+            dogVoice.say(text)
+        } finally {
+            _speaking.value = false
+            if (wasListening && _voiceOn.value) voice.start()
         }
     }
 
@@ -324,6 +376,7 @@ class DogeViewModel(app: Application) : AndroidViewModel(app) {
 
     override fun onCleared() {
         voice.stop()
+        dogVoice.shutdown()
         ble.disconnect()
         super.onCleared()
     }

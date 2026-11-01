@@ -45,4 +45,25 @@ class VoiceCommandsTest {
         // "aus" alone in a long sentence must not switch the lights off
         assertNull(parse("Das ist aus Holz"))
     }
+
+    private fun reaction(s: String) = (parse(s) as VoiceAction.React).reaction.id
+
+    @Test
+    fun conversation() {
+        assertEquals("hello", reaction("Hallo!"))
+        assertEquals("hello", reaction("Guten Morgen Dog-E"))
+        assertEquals("ball", reaction("Wollen wir Ball spielen?"))
+        assertEquals("ball", reaction("Komm wir spielen Ball"))
+        assertEquals("howareyou", reaction("Wie geht's dir?"))
+        assertEquals("love", reaction("Ich hab dich lieb"))
+        assertEquals("night", reaction("Gute Nacht"))
+        assertEquals("bye", reaction("Tschüss"))
+    }
+
+    @Test
+    fun personalizesText() {
+        assertEquals("Wuff! Hallo Yara!", Conversation.personalize("Wuff! Hallo {name}!", "Yara"))
+        assertEquals("Wuff! Hallo!", Conversation.personalize("Wuff! Hallo {name}!", ""))
+        assertEquals("Und dir?", Conversation.personalize("Und dir, {name}?", " "))
+    }
 }

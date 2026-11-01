@@ -22,6 +22,12 @@ Sie ist als Ersatz gedacht, weil die offizielle App (`com.wowwee.doge_robot`) f�
 sie offen ist, und nutzt die Spracherkennung des Geräts (bei Samsung meist Google-Spracheingabe; ohne
 Internet braucht es das deutsche Offline-Sprachpaket).
 
+**Gesprächsmodus**: Mit eingeschalteter Sprachsteuerung reagiert Dog-E auf „Hallo“, „Ball spielen“, „Wie geht's?“,
+„Wie heißt du?“, „Braver Hund“, „Hab dich lieb“, „Hunger“, „Tanzen“, „Witz“, „Gute Nacht“ und „Tschüss“.
+Das Tablet antwortet mit einer Hundestimme (Sprachausgabe, abschaltbar in den Einstellungen), der Hund
+bellt, wedelt, fährt oder leuchtet dazu. Die Reaktionen stehen in `voice/Conversation.kt` und lassen sich
+leicht erweitern. Ohne Sprache: Im Tab *Steuern* unter „Gespräch“ antippen.
+
 **Tablets** (z. B. Samsung Galaxy Tab): Navigation an der Seite, zweispaltige Ansicht, größere Tasten;
 Hoch- und Querformat.
 

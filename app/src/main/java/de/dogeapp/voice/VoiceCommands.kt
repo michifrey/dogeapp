@@ -15,6 +15,7 @@ sealed interface VoiceAction {
         override val description = "Licht $name"
     }
     data object Rainbow : VoiceAction { override val description = "Regenbogen-Licht" }
+    data class React(val reaction: Reaction) : VoiceAction { override val description = reaction.label }
     data class Volume(val delta: Int) : VoiceAction {
         override val description = if (delta > 0) "Lauter" else "Leiser"
     }
@@ -82,6 +83,10 @@ object VoiceCommands {
         TRICKS.forEach { (id, stems) ->
             if (has(stems)) commands.firstOrNull { it.id == id && it.hex.isNotBlank() }?.let { return VoiceAction.Command(it) }
         }
+        // Little conversations ("Hallo", "Ball spielen", "Gute Nacht" …) before plain movement,
+        // so "Komm, wir spielen Ball" starts the game instead of just driving.
+        Conversation.match(phrase)?.let { return VoiceAction.React(it) }
+
         if (has(HEAD)) return VoiceAction.Head(1500)
         if (has(DRIVE)) return VoiceAction.Drive(2000)
 

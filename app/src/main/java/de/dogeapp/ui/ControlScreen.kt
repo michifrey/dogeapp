@@ -5,6 +5,7 @@ import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Slider
 import androidx.compose.material3.TextButton
 import de.dogeapp.data.DogeProtocol
+import de.dogeapp.voice.Conversation
 import kotlin.math.roundToInt
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -135,6 +136,19 @@ fun ControlScreen(vm: DogeViewModel, onOpenSettings: () -> Unit, modifier: Modif
                         }
                     }
                 }
+                Text("Gespräch", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Sag es mit Sprachsteuerung oder tippe drauf – Dog-E antwortet.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Conversation.REACTIONS.forEach { r ->
+                        OutlinedButton(
+                            onClick = { vm.runReaction(r) },
+                            modifier = if (wide) Modifier.height(56.dp) else Modifier,
+                        ) { Text("💬 ${r.label}") }
+                    }
+                }
                 SequenceTester(vm)
                 log.lastOrNull()?.let {
                     Text("${it.time}  ${it.text}", style = MaterialTheme.typography.bodySmall)
@@ -163,6 +177,7 @@ private fun VoicePanel(vm: DogeViewModel) {
     val on by vm.voiceOn.collectAsStateWithLifecycle()
     val listening by vm.voiceListening.collectAsStateWithLifecycle()
     val heard by vm.voiceHeard.collectAsStateWithLifecycle()
+    val speaking by vm.speaking.collectAsStateWithLifecycle()
     val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
         if (ok) vm.setVoice(true)
     }
@@ -187,9 +202,10 @@ private fun VoicePanel(vm: DogeViewModel) {
                 else micPermission.launch(Manifest.permission.RECORD_AUDIO)
             })
         }
-        if (heard.isNotBlank()) Text(heard, style = MaterialTheme.typography.bodyMedium)
+        if (speaking) Text("🗣 Dog-E spricht …", style = MaterialTheme.typography.bodyMedium)
+        else if (heard.isNotBlank()) Text(heard, style = MaterialTheme.typography.bodyMedium)
         Text(
-            "Sag z. B.: \"Bell!\", \"Furz mal!\", \"Sing\", \"Heul\", \"Wedel\", \"Komm her\", \"Kopf\", \"Stopp\", " +
+            "Sag z. B.: \"Hallo!\", \"Wollen wir Ball spielen?\", \"Wie geht's?\", \"Gute Nacht\", \"Bell!\", \"Furz mal!\", \"Sing\", \"Heul\", \"Wedel\", \"Komm her\", \"Kopf\", \"Stopp\", " +
                 "\"Augen blau\", \"Licht rot\", \"Lauter\", \"Leiser\", \"Regenbogen\", \"Licht aus\" – oder den Namen eines eigenen Knopfs.",
             style = MaterialTheme.typography.bodySmall,
         )

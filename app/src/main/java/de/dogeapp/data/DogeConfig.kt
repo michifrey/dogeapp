@@ -33,6 +33,8 @@ data class DogeConfig(
     val commands: List<CommandDef> = DEFAULT_COMMANDS,
     /** Name of the child, used for the greeting. */
     val childName: String = "",
+    /** In conversations the tablet speaks for the dog (text-to-speech). */
+    val dogSpeaks: Boolean = true,
 ) {
     val hasWriteTarget: Boolean get() = writeServiceUuid.isNotBlank() && writeCharUuid.isNotBlank()
 
@@ -84,6 +86,7 @@ class ConfigRepository(context: Context) {
         put("repeatIntervalMs", c.repeatIntervalMs)
         put("nameHint", c.nameHint)
         put("childName", c.childName)
+        put("dogSpeaks", c.dogSpeaks)
         put("commands", JSONArray().apply {
             c.commands.forEach {
                 put(JSONObject().put("id", it.id).put("label", it.label).put("hex", it.hex))
@@ -107,6 +110,7 @@ class ConfigRepository(context: Context) {
             nameHint = o.optString("nameHint", defaults.nameHint),
             commands = cmds,
             childName = o.optString("childName", ""),
+            dogSpeaks = o.optBoolean("dogSpeaks", true),
         )
     }
 

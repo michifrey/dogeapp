@@ -63,6 +63,14 @@ fun CommandsScreen(vm: DogeViewModel, modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.bodySmall,
         )
 
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(
+                checked = config.dogSpeaks,
+                onCheckedChange = { v -> vm.updateConfig { it.copy(dogSpeaks = v) } },
+            )
+            Text("Dog-E spricht (Sprachausgabe des Tablets bei Gesprächen)")
+        }
+
         HorizontalDivider(Modifier.padding(vertical = 8.dp))
         Text("Steuer-Kanal", style = MaterialTheme.typography.titleMedium)
         OutlinedTextField(
