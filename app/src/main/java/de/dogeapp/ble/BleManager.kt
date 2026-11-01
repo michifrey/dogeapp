@@ -16,7 +16,9 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import de.dogeapp.data.Hex
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -88,6 +90,10 @@ class BleManager(private val context: Context) {
 
     private val _log = MutableStateFlow<List<LogLine>>(emptyList())
     val log: StateFlow<List<LogLine>> = _log.asStateFlow()
+
+    /** Every notification as (characteristic UUID, value). */
+    private val _notifications = MutableSharedFlow<Pair<String, ByteArray>>(extraBufferCapacity = 64)
+    val notifications: SharedFlow<Pair<String, ByteArray>> = _notifications
 
     private var gatt: BluetoothGatt? = null
     private val queue = ArrayDeque<() -> Boolean>()
@@ -259,7 +265,11 @@ class BleManager(private val context: Context) {
         }
 
         override fun onCharacteristicChanged(g: BluetoothGatt, c: BluetoothGattCharacteristic, value: ByteArray) {
-            main.post { log("◀ ${shortUuid(c.uuid.toString())}: ${Hex.format(value)}") }
+            val copy = value.copyOf()
+            main.post {
+                log("◀ ${shortUuid(c.uuid.toString())}: ${Hex.format(copy)}")
+                _notifications.tryEmit(c.uuid.toString() to copy)
+            }
         }
 
         @Deprecated("Used on Android < 13")

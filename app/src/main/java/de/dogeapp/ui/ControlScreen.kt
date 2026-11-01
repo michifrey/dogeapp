@@ -1,36 +1,44 @@
 package de.dogeapp.ui
 
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.dogeapp.ble.ConnState
@@ -42,6 +50,7 @@ import de.dogeapp.data.DogeConfig
 fun ControlScreen(vm: DogeViewModel, modifier: Modifier = Modifier) {
     val config by vm.config.collectAsStateWithLifecycle()
     val state by vm.ble.state.collectAsStateWithLifecycle()
+    val pair by vm.pairState.collectAsStateWithLifecycle()
     val log by vm.ble.log.collectAsStateWithLifecycle()
     val connected = state == ConnState.READY
 
@@ -51,23 +60,25 @@ fun ControlScreen(vm: DogeViewModel, modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         if (!connected) {
-            Hint("Nicht verbunden. Zuerst im Tab \"Verbinden\" den Hund auswählen.")
-        } else if (!config.hasWriteTarget) {
-            Hint("Noch kein Steuer-Kanal festgelegt. Im Explorer eine schreibbare Characteristic wählen.")
-        }
-
-        // D-pad: hold to drive, release sends "stop".
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            DriveButton(config.command(DogeConfig.FORWARD), Icons.Filled.KeyboardArrowUp, vm)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                DriveButton(config.command(DogeConfig.LEFT), Icons.Filled.KeyboardArrowLeft, vm)
-                DriveButton(config.command(DogeConfig.STOP), Icons.Filled.Stop, vm, hold = false)
-                DriveButton(config.command(DogeConfig.RIGHT), Icons.Filled.KeyboardArrowRight, vm)
+            Hint("Nicht verbunden. Zuerst im Tab \"Verbinden\" den Hund (\"Mint Dog\") auswählen.")
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Kopplung: ${pair.label()}")
+                if (pair == PairState.NOT_PAIRED || pair == PairState.UNKNOWN) {
+                    OutlinedButton(onClick = { vm.requestPairing() }) { Text("Koppeln") }
+                }
             }
-            DriveButton(config.command(DogeConfig.BACKWARD), Icons.Filled.KeyboardArrowDown, vm)
         }
 
-        Text("Aktionen", style = MaterialTheme.typography.titleMedium)
+        // Hold to move, release sends "stop" – same as the official app.
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            HoldButton(config.command(DogeConfig.FORWARD), Icons.Filled.KeyboardArrowUp, vm)
+            HoldButton(config.command(DogeConfig.HEAD), Icons.Filled.Pets, vm)
+            HoldButton(config.command(DogeConfig.STOP), Icons.Filled.Stop, vm, hold = false)
+        }
+        Text("Gedrückt halten zum Fahren bzw. Kopf bewegen", style = MaterialTheme.typography.bodySmall)
+
+        Text("Tricks", style = MaterialTheme.typography.titleMedium)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             config.commands.filterNot { it.id in DogeConfig.DRIVE_IDS }.forEach { cmd ->
                 FilledTonalButton(onClick = { vm.send(cmd) }, enabled = cmd.hex.isNotBlank()) {
@@ -76,10 +87,51 @@ fun ControlScreen(vm: DogeViewModel, modifier: Modifier = Modifier) {
             }
         }
 
+        SequenceTester(vm)
+
         log.lastOrNull()?.let {
             Text("${it.time}  ${it.text}", style = MaterialTheme.typography.bodySmall)
         }
     }
+}
+
+/** Plays any sequence number – the dog knows many more tricks and sounds than the buttons above. */
+@Composable
+private fun SequenceTester(vm: DogeViewModel) {
+    var text by rememberSaveable { mutableStateOf("106") }
+    val id = text.trim().let { if (it.startsWith("0x", true)) it.drop(2).toIntOrNull(16) else it.toIntOrNull() }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("Sequenz ausprobieren", style = MaterialTheme.typography.titleMedium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedButton(onClick = { id?.let { text = (it - 1).coerceAtLeast(0).toString() } }) { Text("−") }
+            Spacer(Modifier.width(4.dp))
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                singleLine = true,
+                isError = id == null || id !in 0..0xFFFF,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.width(110.dp),
+            )
+            Spacer(Modifier.width(4.dp))
+            OutlinedButton(onClick = { id?.let { text = (it + 1).coerceAtMost(0xFFFF).toString() } }) { Text("+") }
+            Spacer(Modifier.width(8.dp))
+            Button(onClick = { id?.let { vm.playSequence(it) } }, enabled = id != null && id in 0..0xFFFF) { Text("Abspielen") }
+        }
+        Text(
+            "Bekannt: 106 Bellen, 114 Heulen, 115 Singen, 116 Furzen, 168 Schwanzwedeln. " +
+                "Gute Funde unter \"Befehle\" als neuen Knopf speichern.",
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+}
+
+private fun PairState.label() = when (this) {
+    PairState.UNKNOWN -> "unbekannt"
+    PairState.CHECKING -> "prüfe …"
+    PairState.PAIRING -> "koppele … (evtl. am Hund bestätigen)"
+    PairState.PAIRED -> "gekoppelt ✔"
+    PairState.NOT_PAIRED -> "nicht gekoppelt"
 }
 
 @Composable
@@ -94,12 +146,11 @@ private fun Hint(text: String) {
 }
 
 @Composable
-private fun DriveButton(cmd: CommandDef?, icon: ImageVector, vm: DogeViewModel, hold: Boolean = true) {
+private fun HoldButton(cmd: CommandDef?, icon: ImageVector, vm: DogeViewModel, hold: Boolean = true) {
     val enabled = cmd != null && cmd.hex.isNotBlank()
     Box(
         Modifier
-            .padding(4.dp)
-            .size(84.dp)
+            .size(96.dp)
             .alpha(if (enabled) 1f else 0.35f)
             .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(16.dp))
             .pointerInput(cmd, enabled, hold) {
@@ -119,7 +170,7 @@ private fun DriveButton(cmd: CommandDef?, icon: ImageVector, vm: DogeViewModel, 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(icon, contentDescription = cmd?.label, tint = MaterialTheme.colorScheme.onPrimaryContainer)
             Spacer(Modifier.size(2.dp))
-            Text(cmd?.label ?: "", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Text(cmd?.label ?: "", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
         }
     }
 }

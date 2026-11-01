@@ -17,21 +17,18 @@ data class CommandDef(
 )
 
 /**
- * Everything the app needs to know about the Dog-E protocol.
- *
- * The protocol is not publicly documented. These values are filled in once they are found
- * (see docs/PROTOKOLL.md): either in the app (Explorer screen, "use as control channel")
- * or by changing [DogeConfig.DEFAULT] here.
+ * Control channel and command table. Defaults come from [DogeProtocol]; everything can be
+ * changed in the app (tab "Befehle") and is stored on the phone.
  */
 data class DogeConfig(
-    /** Characteristic that commands are written to. */
-    val writeServiceUuid: String = "",
-    val writeCharUuid: String = "",
-    /** true = Write Without Response (typical for toy robots), false = Write With Response. */
+    /** Characteristic that commands are written to (default: the real Dog-E channel). */
+    val writeServiceUuid: String = DogeProtocol.WRITE_SERVICE,
+    val writeCharUuid: String = DogeProtocol.WRITE_CHAR,
+    /** true = Write Without Response (what the official app uses). */
     val writeWithoutResponse: Boolean = true,
-    /** While a drive button is held, the command is repeated at this interval (ms). 0 = send once. */
-    val repeatIntervalMs: Long = 100,
-    /** Part of the advertised name used to highlight the dog in the scan list. */
+    /** While a hold button is pressed, the command is repeated at this interval (ms). 0 = send once. */
+    val repeatIntervalMs: Long = 0,
+    /** Part of the advertised name used to highlight the dog in the scan list ("Mint Dog"). */
     val nameHint: String = "dog",
     val commands: List<CommandDef> = DEFAULT_COMMANDS,
 ) {
@@ -41,25 +38,22 @@ data class DogeConfig(
 
     companion object {
         const val FORWARD = "forward"
-        const val BACKWARD = "backward"
-        const val LEFT = "left"
-        const val RIGHT = "right"
+        const val HEAD = "head"
         const val STOP = "stop"
-        val DRIVE_IDS = setOf(FORWARD, BACKWARD, LEFT, RIGHT, STOP)
+        /** Commands shown as hold buttons at the top of the control screen. */
+        val DRIVE_IDS = setOf(FORWARD, HEAD, STOP)
 
-        // TODO: fill in the real bytes once the protocol is known.
+        private fun hex(b: ByteArray) = Hex.format(b)
+
         val DEFAULT_COMMANDS = listOf(
-            CommandDef(FORWARD, "Vorwärts", ""),
-            CommandDef(BACKWARD, "Rückwärts", ""),
-            CommandDef(LEFT, "Links", ""),
-            CommandDef(RIGHT, "Rechts", ""),
-            CommandDef(STOP, "Stopp", ""),
-            CommandDef("sit", "Sitz", ""),
-            CommandDef("lie", "Platz", ""),
-            CommandDef("bark", "Bellen", ""),
-            CommandDef("dance", "Tanzen", ""),
-            CommandDef("wag", "Schwanzwedeln", ""),
-            CommandDef("tail_light", "Schwanz-Licht", ""),
+            CommandDef(FORWARD, "Fahren", hex(DogeProtocol.motor(DogeProtocol.MOTOR_DRIVE, 1))),
+            CommandDef(HEAD, "Kopf", hex(DogeProtocol.motor(DogeProtocol.MOTOR_HEAD, 2))),
+            CommandDef(STOP, "Stopp", hex(DogeProtocol.stopMotors())),
+            CommandDef("bark", "Bellen", hex(DogeProtocol.playSequence(DogeProtocol.SEQ_BARK))),
+            CommandDef("wag", "Schwanzwedeln", hex(DogeProtocol.playSequence(DogeProtocol.SEQ_WAG_TAIL))),
+            CommandDef("howl", "Heulen", hex(DogeProtocol.playSequence(DogeProtocol.SEQ_HOWL))),
+            CommandDef("sing", "Singen", hex(DogeProtocol.playSequence(DogeProtocol.SEQ_SING))),
+            CommandDef("fart", "Furzen 💨", hex(DogeProtocol.playSequence(DogeProtocol.SEQ_FART))),
         )
     }
 }
@@ -113,6 +107,6 @@ class ConfigRepository(context: Context) {
     }
 
     private companion object {
-        const val KEY = "config_json"
+        const val KEY = "config_json_v2"
     }
 }

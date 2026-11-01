@@ -3,24 +3,20 @@
 Eine eigene Android-App, um den WowWee **Dog-E** Roboterhund per Bluetooth Low Energy (BLE) zu steuern.
 Sie ist als Ersatz gedacht, weil die offizielle App (`com.wowwee.doge_robot`) für Android nicht mehr gepflegt wird.
 
-> **Stand:** Das Bluetooth-Protokoll des Dog-E ist nicht öffentlich dokumentiert, und ich habe auch keine
-> Community-Dokumentation dazu gefunden. Die App ist deshalb zweigeteilt:
-> 1. ein **BLE-Explorer**, mit dem du das Protokoll herausfindest, und
-> 2. eine **Fernsteuerung** (Steuerkreuz + Aktions-Tasten), deren Befehls-Bytes du in der App einträgst.
->
-> Wie du an die Befehle kommst, steht in [`docs/PROTOKOLL.md`](docs/PROTOKOLL.md).
+> **Stand:** Das Bluetooth-Protokoll habe ich aus der Original-App (Version 1.1.4) ausgelesen und eingebaut.
+> Dazu gehören Fahren, Kopf bewegen, Stopp, Tricks (Bellen, Schwanzwedeln, Heulen, Singen, Furzen) und die
+> Kopplung. Am echten Hund ist das noch **ungetestet**. Details stehen in [`docs/PROTOKOLL.md`](docs/PROTOKOLL.md).
 
 ## Funktionen
 
 | Tab | Was er macht |
 |-----|--------------|
 | **Verbinden** | Sucht BLE-Geräte, hebt den Hund hervor und verbindet sich. |
-| **Steuern** | Steuerkreuz (gedrückt halten = fahren, loslassen = Stopp) und frei belegbare Aktions-Tasten. |
+| **Steuern** | Fahren und Kopf (gedrückt halten, loslassen = Stopp), Trick-Knöpfe und ein Sequenz-Tester, um weitere Tricks und Sounds per Nummer zu finden. |
 | **Explorer** | Zeigt alle Services und Characteristics. Du kannst rohe Hex-Bytes senden, Werte lesen und den Steuer-Kanal festlegen. Alle Benachrichtigungen des Hundes landen im Log, das du kopieren kannst. |
 | **Befehle** | Befehlstabelle bearbeiten (Name + Hex-Bytes), Befehle hinzufügen und testen, Konfiguration als JSON exportieren und importieren. |
 
-Die Einstellungen werden auf dem Gerät gespeichert. Ist das Protokoll einmal bekannt, kannst du die
-Werte auch fest in `DogeConfig.DEFAULT_COMMANDS` eintragen, dann sind sie nach jeder Installation da.
+Die Befehle sind vorbelegt (`data/DogeProtocol.kt`) und lassen sich in der App ändern oder ergänzen.
 
 ## APK bekommen
 
@@ -39,11 +35,13 @@ Voraussetzungen: Android 8.0 oder neuer, Bluetooth LE. Für den Build JDK 17 und
 app/src/main/java/de/dogeapp/
   MainActivity.kt        Berechtigungen, Navigation
   ble/BleManager.kt      Scan, Verbindung, GATT-Warteschlange, Schreiben, Benachrichtigungen
-  data/DogeConfig.kt     Protokoll-Konfiguration (UUIDs, Befehlstabelle), Speicherung als JSON
+  data/DogeProtocol.kt   Dog-E-Protokoll: Paketformat, Prüfsumme, Befehle, Kopplung
+  data/DogeConfig.kt     Konfiguration (Kanal, Befehlstabelle), Speicherung als JSON
   data/Hex.kt            Hex-Strings parsen und formatieren
   ui/                    Compose-Screens (Verbinden, Steuern, Explorer, Befehle)
 tools/doge_explorer.py   Gleicher Explorer für den PC (Python + bleak)
-docs/PROTOKOLL.md        Anleitung: Wie man das Dog-E-Protokoll herausfindet
+tools/reverse/           Skripte, mit denen das Protokoll aus der Original-App gelesen wurde
+docs/PROTOKOLL.md        Das Protokoll und wie es gefunden wurde
 ```
 
 ## Hinweis

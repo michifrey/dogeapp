@@ -1,4 +1,58 @@
-# Das Dog-E-Protokoll herausfinden
+# Das Dog-E-Protokoll
+
+## Ergebnis (aus der Original-App 1.1.4 ausgelesen)
+
+Die Original-App ist mit Unity/IL2CPP gebaut. Ausgelesen wurden die Metadaten (`global-metadata.dat`)
+und der ARM-Maschinencode (`libil2cpp.so`), mit den Skripten in `tools/reverse/` (siehe unten).
+**Getestet am echten Hund ist es noch nicht.**
+
+| Was | Wert |
+|-----|------|
+| Gerätename | `Mint Dog` |
+| Senden | Service `FFE5`, Characteristic `FFE9`, *Write Without Response* |
+| Empfangen | Service `FFE0`, Characteristic `FFE4`, Notify |
+| OTA (nicht anfassen!) | Service `FD00`, Characteristics `FD01`/`FD02` |
+
+**Paketformat:** `FF <len> <cmd> <daten…> <checksum>`
+- `len` = Anzahl Bytes nach dem Längenbyte (cmd + daten + checksum)
+- `checksum` = Summe aller Bytes von `len` bis zum letzten Datenbyte, nur die unteren 8 Bit
+
+| Befehl | Bytes | Quelle in der Original-App |
+|--------|-------|----------------------------|
+| Motoren stopp | `FF 03 0A 00 0D` | `SendStopMotorsCommand` |
+| Fahren (vorwärts) | `FF 05 0A 01 01 01 12` | Fahr-Schieber: `SendMotorSpeedCommand(1, 1)` |
+| Kopf bewegen | `FF 05 0A 02 01 02 14` | Kopf-Knopf: `SendMotorSpeedCommand(2, 2)` |
+| Sequenz abspielen | `FF <len> 05 01 <anzahl> <id lo> <id hi> … <cs>` | `SendPlaySequences` |
+| Kopplung prüfen | `FF 09 01 00 <6 Byte Handy-ID> <cs>` | `RequestAuthentication` (nach dem Verbinden) |
+| Kopplung anfordern | `FF 03 01 01 05` | `RequestPairing` (wenn nicht gekoppelt) |
+
+Sequenz-IDs aus dem „Command Mode“: Bellen `0x6A` (106), Heulen `0x72` (114), Singen `0x73` (115),
+Furzen `0x74` (116), Schwanzwedeln `0xA8` (168). Der Hund kennt noch viel mehr Sequenzen (Tricks, Sounds,
+Tanz). Sie lassen sich in der App unter *Steuern → Sequenz ausprobieren* durchprobieren.
+
+Antwort auf die Kopplungs-Prüfung: `FF .. 01 00 <status> ..`, `status = 1` bedeutet gekoppelt.
+Antwort auf eine Kopplungs-Anfrage: `FF .. 01 01 <4|5> ..`.
+
+Weitere bekannte Befehlsgruppen (noch nicht eingebaut): LEDs (`SendSetLed`, Ziele Brust/Schwanz/Augen/Füße,
+12 Farben), Lautstärke (`SendSetVolume`), Akku (`RequestBatteryLevel`), Firmware-Version, Schwanz-Animationen,
+Spiele und Profile. Die Adressen findest du mit `tools/reverse/addrs.py`, den Code mit `tools/reverse/dis.py`.
+
+### Analyse selbst wiederholen
+
+```
+unzip com.wowwee.doge_robot.apk -d base; unzip config.armeabi_v7a.apk -d split
+pip install capstone pyelftools
+M=base/assets/bin/Data/Managed/Metadata/global-metadata.dat; L=split/lib/armeabi-v7a/libil2cpp.so
+python3 tools/reverse/meta.py  $M dump.txt                 # Klassen, Felder, Konstanten
+python3 tools/reverse/addrs.py $M $L addrs.json            # Methoden -> Adressen
+python3 tools/reverse/dis.py   $L addrs.json "BleManager.SendStopMotorsCommand(0)"
+python3 tools/reverse/callers.py $L addrs.json 0x4e53d8    # wer ruft eine Methode auf
+```
+
+---
+
+# Anhang: Wie man ein unbekanntes Protokoll herausfindet
+
 
 Damit die Steuerung funktioniert, braucht die App drei Dinge:
 
