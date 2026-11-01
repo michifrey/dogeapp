@@ -13,7 +13,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,20 +26,28 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.outlined.Bluetooth as OutlinedBluetooth
+import androidx.compose.material.icons.outlined.Lightbulb as OutlinedLightbulb
+import androidx.compose.material.icons.outlined.Settings as OutlinedSettings
+import androidx.compose.material.icons.outlined.SportsEsports as OutlinedSportsEsports
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -52,16 +59,18 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.dogeapp.ble.ConnState
-import de.dogeapp.ui.BrandButton
 import de.dogeapp.ui.ConnectScreen
 import de.dogeapp.ui.DogeViewModel
 import de.dogeapp.ui.ExplorerScreen
@@ -72,20 +81,25 @@ import de.dogeapp.ui.LocalFeedback
 import de.dogeapp.ui.PlayScreen
 import de.dogeapp.ui.SettingsScreen
 import de.dogeapp.ui.TopHeader
-import de.dogeapp.ui.WobblyDog
+import de.dogeapp.ui.Mascot
+import de.dogeapp.ui.PaperBackground
+import de.dogeapp.ui.PillButton
+import de.dogeapp.ui.PosterHeadline
+import de.dogeapp.ui.ScriptNote
+import de.dogeapp.ui.Sticker
 import de.dogeapp.ui.theme.DogeTheme
-import de.dogeapp.ui.theme.backgroundBrush
+import de.dogeapp.ui.theme.Orange
 
 /**
  * Top-level tabs. The first two are for the child, the last two for the parent
  * (on tablets they are visually separated in the side rail). The developer Explorer is not a tab:
  * it opens from Einstellungen → "Für Eltern / Experten".
  */
-private enum class Tab(val label: String, val icon: ImageVector, val forChild: Boolean) {
-    PLAY("Spielen", Icons.Filled.SportsEsports, true),
-    LIGHT("Licht", Icons.Filled.Lightbulb, true),
-    CONNECT("Verbinden", Icons.Filled.Bluetooth, false),
-    SETTINGS("Einstellungen", Icons.Filled.Settings, false),
+private enum class Tab(val label: String, val icon: ImageVector, val outlined: ImageVector, val forChild: Boolean) {
+    PLAY("Spielen", Icons.Filled.SportsEsports, Icons.Outlined.OutlinedSportsEsports, true),
+    LIGHT("Licht", Icons.Filled.Lightbulb, Icons.Outlined.OutlinedLightbulb, true),
+    CONNECT("Verbinden", Icons.Filled.Bluetooth, Icons.Outlined.OutlinedBluetooth, false),
+    SETTINGS("Einstellungen", Icons.Filled.Settings, Icons.Outlined.OutlinedSettings, false),
 }
 
 class MainActivity : ComponentActivity() {
@@ -103,8 +117,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Android 15+ draws apps edge to edge; white status bar icons on the purple header.
-        enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT))
+        // Android 15+ draws apps edge to edge. The page is cream paper (dark icons) in light mode and
+        // warm brown-black (light icons) in dark mode; "auto" follows the system theme like DogeTheme.
+        val transparent = android.graphics.Color.TRANSPARENT
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(transparent, transparent),
+            navigationBarStyle = SystemBarStyle.auto(transparent, transparent),
+        )
         setContent {
             DogeTheme {
                 var granted by remember { mutableStateOf(hasPermissions()) }
@@ -127,24 +146,46 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun PermissionScreen(onRequest: () -> Unit) {
-    Box(
-        Modifier.fillMaxSize().background(backgroundBrush()).systemBarsPadding().padding(24.dp),
-        contentAlignment = Alignment.Center,
-    ) {
+    PaperBackground(Modifier.fillMaxSize()) {
         Column(
-            Modifier.widthIn(max = 480.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            Modifier
+                .fillMaxSize()
+                .systemBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            WobblyDog(size = 72.sp)
-            Text("Dog-E Control", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
+            Box {
+                Mascot(Modifier.padding(top = 16.dp), size = 180.dp)
+                ScriptNote("psst!", Modifier.align(Alignment.TopStart), rotation = -12f)
+                Sticker(
+                    "100 % harmlos*",
+                    Modifier.align(Alignment.BottomEnd),
+                    footnote = "*versprochen",
+                    diameter = 92.dp,
+                    rotation = 10f,
+                )
+            }
+            PosterHeadline(
+                "Darf ich?",
+                "ich brauch Bluetooth!",
+                modifier = Modifier.widthIn(max = 480.dp),
+                centered = true,
+                bigSize = 56.sp,
+            )
             Text(
                 "Die App braucht die Bluetooth-Berechtigung, um den Hund zu finden und zu steuern.",
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.widthIn(max = 480.dp),
             )
-            BrandButton("Berechtigung erteilen", onClick = onRequest, modifier = Modifier.fillMaxWidth())
+            PillButton(
+                "Berechtigung erteilen",
+                onClick = onRequest,
+                modifier = Modifier.widthIn(max = 480.dp).fillMaxWidth(),
+            )
         }
     }
 }
@@ -188,9 +229,14 @@ private fun App(onEnableBluetooth: () -> Unit) {
                         IconButton(onClick = { explorerOpen = false }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
                         }
-                        Text("Bluetooth-Explorer", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                        Text(
+                            "BLUETOOTH-EXPLORER",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.weight(1f),
+                        )
                     }
-                    HorizontalDivider()
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                     ExplorerScreen(vm, Modifier.weight(1f).fillMaxWidth())
                 }
             } else {
@@ -228,15 +274,27 @@ private fun App(onEnableBluetooth: () -> Unit) {
         }
     }
 
+    val ink = MaterialTheme.colorScheme.onBackground
+    val line = MaterialTheme.colorScheme.outline
+
     CompositionLocalProvider(LocalFeedback provides feedback) {
-        Box(Modifier.fillMaxSize().background(backgroundBrush())) {
+        PaperBackground(Modifier.fillMaxSize()) {
             if (tablet) {
-                Scaffold(containerColor = Color.Transparent, topBar = { TopHeader(vm) }) { padding ->
+                Scaffold(
+                    containerColor = Color.Transparent,
+                    contentColor = ink,
+                    topBar = { TopHeader(vm) },
+                ) { padding ->
                     Row(Modifier.padding(padding).fillMaxSize()) {
                         NavigationRail(
-                            containerColor = Color.Transparent,
+                            containerColor = MaterialTheme.colorScheme.surface,
                             // The Scaffold padding already contains the system bars.
                             windowInsets = WindowInsets(0, 0, 0, 0),
+                            modifier = Modifier.drawWithContent {
+                                drawContent()
+                                // Thin ink line on the right edge, like a paper strip.
+                                drawLine(line, Offset(size.width, 0f), Offset(size.width, size.height), 1.5.dp.toPx())
+                            },
                         ) {
                             Spacer(Modifier.height(8.dp))
                             Tab.entries.filter { it.forChild }.forEach { t -> RailItem(t, current == t) { select(t) } }
@@ -251,15 +309,32 @@ private fun App(onEnableBluetooth: () -> Unit) {
             } else {
                 Scaffold(
                     containerColor = Color.Transparent,
+                    contentColor = ink,
                     topBar = { TopHeader(vm) },
                     bottomBar = {
-                        NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+                        NavigationBar(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            tonalElevation = 0.dp,
+                            modifier = Modifier.drawWithContent {
+                                drawContent()
+                                // Thin ink line on top of the cream bar.
+                                drawLine(line, Offset(0f, 0f), Offset(size.width, 0f), 1.5.dp.toPx())
+                            },
+                        ) {
                             Tab.entries.forEach { t ->
+                                val selected = current == t
                                 NavigationBarItem(
-                                    selected = current == t,
+                                    selected = selected,
                                     onClick = { select(t) },
-                                    icon = { Icon(t.icon, contentDescription = null) },
-                                    label = { Text(t.label, maxLines = 1) },
+                                    icon = { Icon(if (selected) t.icon else t.outlined, contentDescription = null) },
+                                    label = { Text(t.label, maxLines = 1, style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, fontWeight = FontWeight.SemiBold)) },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = Orange,
+                                        selectedTextColor = Orange,
+                                        indicatorColor = Orange.copy(alpha = 0.16f),
+                                        unselectedIconColor = ink,
+                                        unselectedTextColor = ink,
+                                    ),
                                 )
                             }
                         }
@@ -272,10 +347,18 @@ private fun App(onEnableBluetooth: () -> Unit) {
 
 @Composable
 private fun RailItem(t: Tab, selected: Boolean, onClick: () -> Unit) {
+    val ink = MaterialTheme.colorScheme.onBackground
     NavigationRailItem(
         selected = selected,
         onClick = onClick,
-        icon = { Icon(t.icon, contentDescription = null) },
-        label = { Text(t.label, maxLines = 1) },
+        icon = { Icon(if (selected) t.icon else t.outlined, contentDescription = null) },
+        label = { Text(t.label, maxLines = 1, style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, fontWeight = FontWeight.SemiBold)) },
+        colors = NavigationRailItemDefaults.colors(
+            selectedIconColor = Orange,
+            selectedTextColor = Orange,
+            indicatorColor = Orange.copy(alpha = 0.16f),
+            unselectedIconColor = ink,
+            unselectedTextColor = ink,
+        ),
     )
 }

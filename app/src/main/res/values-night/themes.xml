@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Dark window theme: warm brown-black paper with light bar icons, orange accent. -->
     <style name="Theme.DogE" parent="@android:style/Theme.Material.NoActionBar">
-        <item name="android:statusBarColor">#FF4C1D95</item>
-        <item name="android:navigationBarColor">#FF17121F</item>
-        <item name="android:windowBackground">#FF17121F</item>
-        <item name="android:colorAccent">#FFC4B5FD</item>
+        <item name="android:statusBarColor">#FF1A1411</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">#FF231C17</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
+        <item name="android:windowBackground">#FF1A1411</item>
+        <item name="android:colorAccent">#FFEF5B25</item>
     </style>
 </resources>

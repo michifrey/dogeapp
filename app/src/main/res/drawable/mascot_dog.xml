@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Dog-E mascot: own flat illustration of a friendly robot dog (cream body, ink outlines,
+  dark visor with purple eyes, floppy ears, pink tongue, orange collar, one paw waving).
+  Not derived from any official artwork.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="220dp"
+    android:viewportWidth="200"
+    android:viewportHeight="220">
+
+    <!-- ground shadow -->
+    <path
+        android:fillColor="#1E1A16"
+        android:fillAlpha="0.14"
+        android:pathData="M38,207 a62,8 0 1,0 124,0 a62,8 0 1,0 -124,0 Z" />
+
+    <!-- tail (ink outline stroke, then cream stroke on top) -->
+    <path
+        android:strokeColor="#1E1A16"
+        android:strokeWidth="15"
+        android:strokeLineCap="round"
+        android:pathData="M138,182 C162,180 176,160 172,128" />
+    <path
+        android:strokeColor="#FFFDF7"
+        android:strokeWidth="9"
+        android:strokeLineCap="round"
+        android:pathData="M138,182 C162,180 176,160 172,128" />
+    <path
+        android:fillColor="#EF5B25"
+        android:strokeColor="#1E1A16"
+        android:strokeWidth="2.5"
+        android:pathData="M165,126 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0 Z" />
+
+    <!-- body (sitting pear shape) -->
+    <path
+        android:fillColor="#FFFDF7"
+        android:strokeColor="#1E1A16"
+        android:strokeWidth="3.5"
+        android:strokeLineJoin="round"
+        android:pathData="M58,202 C52,166 66,126 100,124 C134,126 148,166 142,202 Z" />
+
+    <!-- haunches -->
+    <path
+        android:fillColor="#F3EADB"
+        android:strokeColor="#1E1A16"
+        android:strokeWidth="3"
+        android:pathData="M48,190 a18,13 0 1,0 36,0 a18,13 0 1,0 -36,0 Z" />
+    <path
+        android:fillColor="#F3EADB"
+        android:strokeColor="#1E1A16"
+        android:strokeWidth="3"
+        android:pathData="M116,190 a18,13 0 1,0 36,0 a18,13 0 1,0 -36,0 Z" />
+
+    <!-- chest panel with light -->
+    <path
+        android:fillColor="#E9E0FB"
+        android:strokeColor="#1E1A16"
+        android:strokeWidth="2.5"
+        android:pathData="M78,166 a22,18 0 1,0 44,0 a22,18 0 1,0 -44,0 Z" />
+    <path
+        android:fillColor="#8B5CF6"
+        android:pathData="M92,166 a8,8 0 1,0 16,0 a8,8 0 1,0 -16,0 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.85"
+        android:pathData="M95,163 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0 Z" />
+
+    <!-- front paw on the ground -->
+    <path
+        android:fillColor="#FFFDF7"
+        android:strokeColor="#1E1A16"
+        android:strokeWidth="3"
+        android:pathData="M100,201 a15,9 0 1,0 30,0 a15,9 0 1,0 -30,0 Z" />
+    <path
+        android:strokeColor="#1E1A16"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M110,197 L110,203 M120,197 L120,203" />
+
+    <!-- collar + tag -->
+    <path
+        android:fillColor="#EF5B25"
+        android:strokeColor="#1E1A16"
+        android:strokeWidth="2.5"
+        android:strokeLineJoin="round"
+        android:pathData="M72,128 C88,136 112,136 128,128 L130,137 C112,146 88,146 70,137 Z" />
+    <path
+        android:fillColor="#F6C531"
+        android:strokeColor="#1E1A16"
+        android:strokeWidth="2"
+        android:pathData="M93,148 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0 Z" />
+
+    <!-- floppy ears behind the head -->
+    <path
+        android:fillColor="#2B2522"
+        android:strokeColor="#1E1A16"
+        android:strokeWidth="3"
+        android:strokeLineJoin="round"
+        android:pathData="M64,40 C44,34 30,52 32,80 C33,96 42,106 51,102 C60,98 59,76 68,58 Z" />
+    <path
+        android:fillColor="#2B2522"
+        android:strokeColor="#1E1A16"
+        android:strokeWidth="3"
+        android:strokeLineJoin="round"
+        android:pathData="M144,40 C164,34 178,52 176,80 C175,96 166,106 157,102 C148,98 149,76 140,58 Z" />
+
+    <!-- head -->
+    <path
+        android:fillColor="#FFFDF7"
+        android:strokeColor="#1E1A16"
+        android:strokeWidth="3.5"
+        android:strokeLineJoin="round"
+        android:pathData="M92,30 L116,30 C140,30 156,46 156,70 L156,82 C156,106 140,120 116,120 L92,120 C68,120 52,106 52,82 L52,70 C52,46 68,30 92,30 Z" />
+
+    <!-- inner ear flaps in front (orange) -->
+    <path
+        android:fillColor="#EF5B25"
+        android:strokeColor="#1E1A16"
+        android:strokeWidth="2.5"
+        android:strokeLineJoin="round"
+        android:pathData="M58,46 C48,50 44,64 47,80 C49,88 54,90 56,86 C58,76 58,60 62,50 Z" />
+    <path
+        android:fillColor="#EF5B25"
+        android:strokeColor="#1E1A16"
+        android:strokeWidth="2.5"
+        android:strokeLineJoin="round"
+        android:pathData="M150,46 C160,50 164,64 161,80 C159,88 154,90 152,86 C150,76 150,60 146,50 Z" />
+
+    <!-- antenna -->
+    <path
+        android:strokeColor="#1E1A16"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M104,30 L104,20" />
+    <path
+        android:fillColor="#F6C531"
+        android:strokeColor="#1E1A16"
+        android:strokeWidth="2.5"
+        android:pathData="M98,16 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0 Z" />
+
+    <!-- visor -->
+    <path
+        android:fillColor="#2B2522"
+        android:pathData="M86,50 L122,50 C134,50 143,59 143,71 L143,75 C143,87 134,96 122,96 L86,96 C74,96 65,87 65,75 L65,71 C65,59 74,50 86,50 Z" />
+
+    <!-- eyes: purple glow, darker iris, highlights -->
+    <path
+        android:fillColor="#A78BFA"
+        android:pathData="M77,73 a11,13 0 1,0 22,0 a11,13 0 1,0 -22,0 Z" />
+    <path
+        android:fillColor="#A78BFA"
+        android:pathData="M109,73 a11,13 0 1,0 22,0 a11,13 0 1,0 -22,0 Z" />
+    <path
+        android:fillColor="#7C3AED"
+        android:pathData="M82,75 a6,8 0 1,0 12,0 a6,8 0 1,0 -12,0 Z" />
+    <path
+        android:fillColor="#7C3AED"
+        android:pathData="M114,75 a6,8 0 1,0 12,0 a6,8 0 1,0 -12,0 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M88,67 a3.5,3.5 0 1,0 7,0 a3.5,3.5 0 1,0 -7,0 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M120,67 a3.5,3.5 0 1,0 7,0 a3.5,3.5 0 1,0 -7,0 Z" />
+
+    <!-- cheeks -->
+    <path
+        android:fillColor="#F7A9B8"
+        android:fillAlpha="0.7"
+        android:pathData="M60,104 a6,4 0 1,0 12,0 a6,4 0 1,0 -12,0 Z" />
+    <path
+        android:fillColor="#F7A9B8"
+        android:fillAlpha="0.7"
+        android:pathData="M136,104 a6,4 0 1,0 12,0 a6,4 0 1,0 -12,0 Z" />
+
+    <!-- nose -->
+    <path
+        android:fillColor="#1E1A16"
+        android:pathData="M97,100 C97,97 111,97 111,100 C111,104 106,106 104,106 C102,106 97,104 97,100 Z" />
+
+    <!-- tongue, then smile on top -->
+    <path
+        android:fillColor="#FF7A93"
+        android:strokeColor="#1E1A16"
+        android:strokeWidth="1.8"
+        android:strokeLineJoin="round"
+        android:pathData="M99,109 L109,109 L109,114 C109,117.5 106.5,119 104,119 C101.5,119 99,117.5 99,114 Z" />
+    <path
+        android:strokeColor="#1E1A16"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M92,107 Q98,112 104,108 Q110,112 116,107" />
+
+    <!-- waving arm (outline stroke + cream stroke) and raised paw -->
+    <path
+        android:strokeColor="#1E1A16"
+        android:strokeWidth="24"
+        android:strokeLineCap="round"
+        android:pathData="M80,150 C62,142 44,128 34,110" />
+    <path
+        android:strokeColor="#FFFDF7"
+        android:strokeWidth="17"
+        android:strokeLineCap="round"
+        android:pathData="M80,150 C62,142 44,128 34,110" />
+    <path
+        android:fillColor="#FFFDF7"
+        android:strokeColor="#1E1A16"
+        android:strokeWidth="3"
+        android:pathData="M15,100 a15,15 0 1,0 30,0 a15,15 0 1,0 -30,0 Z" />
+    <path
+        android:fillColor="#F7C9D3"
+        android:pathData="M23,103 a7,6 0 1,0 14,0 a7,6 0 1,0 -14,0 Z" />
+    <path
+        android:fillColor="#F7C9D3"
+        android:pathData="M19,93 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 Z M27,89 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 Z M35,93 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 Z" />
+
+    <!-- wave motion lines -->
+    <path
+        android:strokeColor="#1E1A16"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M6,72 C3,78 2,86 4,94 M14,66 C10,71 8,77 8,83" />
+
+    <!-- sparkle next to the head -->
+    <path
+        android:fillColor="#1E1A16"
+        android:pathData="M182,30 L184.5,38 L192,40 L184.5,42 L182,50 L179.5,42 L172,40 L179.5,38 Z" />
+</vector>

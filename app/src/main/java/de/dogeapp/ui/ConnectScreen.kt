@@ -5,8 +5,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,21 +13,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -43,9 +39,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -56,11 +50,13 @@ import de.dogeapp.ble.ConnState
 import de.dogeapp.ble.FoundDevice
 import de.dogeapp.ble.dogRank
 import de.dogeapp.ble.looksLikeDog
-import de.dogeapp.ui.theme.Mint
+import de.dogeapp.ui.theme.DoneGreen
+import de.dogeapp.ui.theme.pastel
 
 /**
- * Parent-facing connection screen: big status card with the steps "Suchen → Verbinden → Bereit",
- * likely dogs prominently with a big "Verbinden" button, all other devices collapsed.
+ * Parent-facing connection screen: poster headline with the mascot, progress card with the steps
+ * "Suchen → Verbinden → Koppeln", likely dogs prominently with a big "Verbinden" pill, all other
+ * devices collapsed.
  */
 @Composable
 fun ConnectScreen(
@@ -97,65 +93,83 @@ fun ConnectScreen(
         waitingForConnect = true
         vm.ble.connect(d.address)
     }
+    val btOn = vm.ble.isBluetoothOn
+    val connecting = state == ConnState.CONNECTING || state == ConnState.DISCOVERING
     // Every item is at most 720 dp wide and centered, so tablets don't get stretched rows.
     val itemMod = Modifier.widthIn(max = 720.dp).fillMaxWidth()
 
     LazyColumn(
         modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 80.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        item(key = "greeting") {
-            GreetingCard(config.childName, state == ConnState.READY, onOpenSettings, itemMod)
+        item(key = "hero") {
+            val (big, script, note) = when {
+                !btOn -> Triple("Bluetooth ist aus", "einmal einschalten, bitte", "hilfe.")
+                state == ConnState.READY -> Triple("Dog-E ist da!", "ihr seid verbunden", "Los geht's!")
+                connecting -> Triple("Gleich geht's los", "Dog-E wird angerufen …", "wuff?")
+                scanning -> Triple("Wo ist Dog-E?", "ich schnüffel mal …", "hier?")
+                else -> Triple("Wo ist Dog-E?", "schalt mich ein!", "hallo?")
+            }
+            ConnectHero(
+                big = big,
+                script = script,
+                note = note,
+                childName = config.childName,
+                onOpenSettings = onOpenSettings,
+                modifier = itemMod,
+            )
         }
         item(key = "status") {
-            SectionCard(itemMod) {
-                StepIndicator(state, scanning)
+            PaperCard(itemMod, spacing = 14.dp) {
+                StepRows(state, scanning, pair)
                 when {
-                    !vm.ble.isBluetoothOn -> {
+                    !btOn -> {
                         StatusText("📴", "Bluetooth ist aus", "Schalte Bluetooth ein, damit die App Dog-E finden kann.")
-                        Button(onClick = onEnableBluetooth, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
-                            Text("Bluetooth einschalten")
-                        }
+                        PillButton("Bluetooth einschalten", onClick = onEnableBluetooth, modifier = Modifier.fillMaxWidth(), trailing = "→")
                     }
                     state == ConnState.READY -> {
                         StatusText("✅", "Verbunden" + (name?.let { " mit $it" } ?: ""), pair.friendly())
                         PairingPrompt(pair, onPair = { vm.requestPairing() })
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             BatteryBadge(battery)
-                            TextButton(onClick = { vm.requestBattery() }) { Text("Aktualisieren") }
+                            Spacer(Modifier.weight(1f))
+                            InkTextButton("Aktualisieren", onClick = { vm.requestBattery() })
                         }
-                        BrandButton("🎮 Los, spielen!", onClick = onPlay, modifier = Modifier.fillMaxWidth())
-                        TextButton(onClick = { vm.ble.disconnect() }) { Text("Verbindung trennen") }
+                        PillButton("Los, spielen!", onClick = onPlay, modifier = Modifier.fillMaxWidth(), trailing = "→")
+                        InkTextButton("Verbindung trennen", onClick = { vm.ble.disconnect() }, modifier = Modifier.align(Alignment.CenterHorizontally))
                     }
-                    state == ConnState.CONNECTING || state == ConnState.DISCOVERING -> {
+                    connecting -> {
                         StatusText(
                             "🔗",
                             "Verbinde" + (name?.let { " mit $it" } ?: "") + " …",
                             if (state == ConnState.DISCOVERING) "Fast fertig – Dog-E wird eingerichtet."
                             else "Einen Moment, Dog-E wird angerufen.",
                         )
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                        TextButton(onClick = { vm.ble.disconnect() }) { Text("Abbrechen") }
+                        InkTextButton("Abbrechen", onClick = { vm.ble.disconnect() }, modifier = Modifier.align(Alignment.CenterHorizontally))
                     }
                     scanning -> {
                         StatusText("🔍", "Suche nach Dog-E …", "Dog-E einschalten und in die Nähe stellen.")
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                        OutlinedButton(onClick = { vm.ble.stopScan() }, modifier = Modifier.heightIn(min = 48.dp)) {
-                            Text("Suche stoppen")
-                        }
+                        PillButton(
+                            "Suche stoppen",
+                            onClick = { vm.ble.stopScan() },
+                            modifier = Modifier.fillMaxWidth(),
+                            style = PillStyle.Outline,
+                            trailing = null,
+                            minHeight = 56.dp,
+                        )
                     }
                     else -> {
                         StatusText("💤", "Nicht verbunden", "Dog-E einschalten, die Original-App schließen und suchen.")
-                        BrandButton("🔍 Dog-E suchen", onClick = { vm.ble.startScan() }, modifier = Modifier.fillMaxWidth())
+                        PillButton("Dog-E suchen", onClick = { vm.ble.startScan() }, modifier = Modifier.fillMaxWidth())
                     }
                 }
             }
         }
 
         if (dogs.isNotEmpty() || scanning) {
-            item(key = "dogsTitle") { SectionTitle("🐶", "Gefundene Hunde", itemMod.padding(top = 8.dp)) }
+            item(key = "dogsTitle") { SectionTitle("🐶", "Gefundene Hunde", itemMod.padding(top = 8.dp), colorIndex = 2) }
         }
         if (dogs.isEmpty() && (scanning || devices.isNotEmpty())) {
             item(key = "dogsEmpty") {
@@ -163,7 +177,7 @@ fun ConnectScreen(
                     if (scanning) "Noch kein Dog-E gefunden … Ist er eingeschaltet?"
                     else "Kein Dog-E gefunden. Hund aus- und wieder einschalten, Original-App überall schließen, dann nochmal suchen.",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onBackground,
                     modifier = itemMod,
                 )
             }
@@ -175,7 +189,11 @@ fun ConnectScreen(
         // Other Bluetooth devices are hidden by default; only a small link for experts.
         if (others.isNotEmpty()) {
             item(key = "othersTitle") {
-                TextButton(onClick = { othersOpen = !othersOpen }, modifier = itemMod.padding(top = 8.dp)) {
+                TextButton(
+                    onClick = { othersOpen = !othersOpen },
+                    modifier = itemMod.padding(top = 8.dp).heightIn(min = 48.dp),
+                    colors = ButtonDefaults.textButtonColors(contentColor = inkColor()),
+                ) {
                     Text(
                         if (othersOpen) "Andere Bluetooth-Geräte ausblenden"
                         else "Andere Bluetooth-Geräte anzeigen (${others.size})",
@@ -196,44 +214,86 @@ fun ConnectScreen(
     }
 }
 
-/** Three dots "Suchen → Verbinden → Bereit"; the current step is highlighted, done steps get a tick. */
+/** Poster headline left, mascot with a hand-written note right. */
 @Composable
-private fun StepIndicator(state: ConnState, scanning: Boolean) {
-    val current = when (state) {
-        ConnState.DISCONNECTED -> if (scanning) 0 else -1
-        ConnState.CONNECTING, ConnState.DISCOVERING -> 1
-        ConnState.READY -> 3 // all done
+private fun ConnectHero(
+    big: String,
+    script: String,
+    note: String,
+    childName: String,
+    onOpenSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier, verticalAlignment = Alignment.Bottom) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (childName.isNotBlank()) {
+                ScriptNote("Hallo $childName!", rotation = -4f, color = MaterialTheme.colorScheme.onBackground, fontSize = 24.sp)
+            }
+            PosterHeadline(big, script, bigSize = 46.sp, scriptSize = 30.sp)
+            if (childName.isBlank()) InkTextButton("✏️ Namen eintragen", onClick = onOpenSettings)
+        }
+        Box {
+            MascotWithNote(note, size = 120.dp)
+            DoodleBurst(Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = 10.dp))
+        }
     }
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        listOf("Suchen", "Verbinden", "Bereit").forEachIndexed { i, label ->
-            val done = i < current || current == 3
-            val active = i == current
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    Modifier
-                        .size(32.dp)
-                        .background(
+}
+
+/**
+ * Three progress rows like the subject cards of the poster: emoji in a pastel circle, step name,
+ * state on the right and an orange bar (indeterminate while the step is running).
+ */
+@Composable
+private fun StepRows(state: ConnState, scanning: Boolean, pair: PairState) {
+    // 0 = Suchen, 1 = Verbinden, 2 = Koppeln
+    val connected = state == ConnState.READY
+    val done = listOf(
+        state != ConnState.DISCONNECTED,
+        connected,
+        connected && pair == PairState.PAIRED,
+    )
+    val active = listOf(
+        state == ConnState.DISCONNECTED && scanning,
+        state == ConnState.CONNECTING || state == ConnState.DISCOVERING,
+        connected && (pair == PairState.PAIRING || pair == PairState.CHECKING),
+    )
+    val steps = listOf("🔍" to "Suchen", "🔗" to "Verbinden", "👃" to "Koppeln")
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        steps.forEachIndexed { i, (emoji, label) ->
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 56.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconCircle(emoji, pastel(i), size = 44.dp)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
                             when {
-                                done -> Mint
-                                active -> MaterialTheme.colorScheme.primary
-                                else -> MaterialTheme.colorScheme.surfaceContainerHighest
+                                done[i] -> "✓ fertig"
+                                active[i] -> "läuft …"
+                                else -> "–"
                             },
-                            CircleShape,
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        if (done) "✓" else "${i + 1}",
-                        color = if (done || active) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.labelLarge,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (done[i]) DoneGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    OrangeBar(
+                        when {
+                            done[i] -> 1f
+                            active[i] -> null
+                            else -> 0f
+                        },
                     )
                 }
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    label,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (done || active) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
         }
     }
@@ -242,10 +302,10 @@ private fun StepIndicator(state: ConnState, scanning: Boolean) {
 @Composable
 private fun StatusText(emoji: String, title: String, subtitle: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(emoji, fontSize = 36.sp)
-        Spacer(Modifier.width(16.dp))
+        Text(emoji, fontSize = 32.sp)
+        Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleLarge)
+            Text(title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
             Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -259,78 +319,73 @@ private fun signalLabel(rssi: Int) = when {
 
 @Composable
 private fun DogDeviceCard(d: FoundDevice, enabled: Boolean, onConnect: () -> Unit, modifier: Modifier = Modifier) {
-    Row(
-        modifier
-            .clip(MaterialTheme.shapes.large)
-            .background(MaterialTheme.colorScheme.primaryContainer)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text("🐶", fontSize = 36.sp)
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                d.name ?: "Dog-E (ohne Namen)",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                "📶 ${signalLabel(d.rssi)}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
+    PaperCard(modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconCircle("🐶", pastel(2), size = 52.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    d.name ?: "Dog-E (ohne Namen)",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    "📶 ${signalLabel(d.rssi)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
-        Spacer(Modifier.width(8.dp))
-        Button(onClick = onConnect, enabled = enabled, modifier = Modifier.heightIn(min = 56.dp)) {
-            Text("Verbinden", style = MaterialTheme.typography.titleMedium)
-        }
+        PillButton("Verbinden", onClick = onConnect, enabled = enabled, modifier = Modifier.fillMaxWidth(), minHeight = 56.dp)
     }
 }
 
 /** Technical row for devices that are probably not the dog (developer info visible). */
 @Composable
 private fun OtherDeviceRow(d: FoundDevice, enabled: Boolean, onConnect: () -> Unit, modifier: Modifier = Modifier) {
-    Row(
-        modifier
-            .clip(MaterialTheme.shapes.medium)
-            .background(MaterialTheme.colorScheme.surfaceContainerLow)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                d.name ?: if (looksLikeDog(d)) "(ohne Namen – vermutlich Dog-E)" else "(ohne Namen)",
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                "${d.address} · ${d.rssi} dBm",
-                fontFamily = FontFamily.Monospace,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (d.serviceUuids.isNotEmpty()) {
+    PaperCard(modifier, dashed = true, padding = 12.dp, spacing = 8.dp) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    "Services: ${d.serviceUuids.joinToString()}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    d.name ?: if (looksLikeDog(d)) "(ohne Namen – vermutlich Dog-E)" else "(ohne Namen)",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
-            }
-            d.manufacturerData?.let {
                 Text(
-                    "Hersteller-Daten: $it",
+                    "${d.address} · ${d.rssi} dBm",
                     fontFamily = FontFamily.Monospace,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (d.serviceUuids.isNotEmpty()) {
+                    Text(
+                        "Services: ${d.serviceUuids.joinToString()}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                d.manufacturerData?.let {
+                    Text(
+                        "Hersteller-Daten: $it",
+                        fontFamily = FontFamily.Monospace,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
-        }
-        Spacer(Modifier.width(8.dp))
-        OutlinedButton(onClick = onConnect, enabled = enabled, modifier = Modifier.heightIn(min = 48.dp)) {
-            Text("Verbinden", textAlign = TextAlign.Center)
+            Spacer(Modifier.width(8.dp))
+            OutlinedButton(
+                onClick = onConnect,
+                enabled = enabled,
+                modifier = Modifier.heightIn(min = 48.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = inkColor()),
+            ) {
+                Text("Verbinden", textAlign = TextAlign.Center)
+            }
         }
     }
 }
@@ -343,68 +398,61 @@ private fun OtherDeviceRow(d: FoundDevice, enabled: Boolean, onConnect: () -> Un
 fun PairingPrompt(pair: PairState, onPair: () -> Unit, modifier: Modifier = Modifier) {
     when (pair) {
         PairState.PAIRED -> Unit
-        PairState.CHECKING -> Text(
-            "🐽 Dog-E schnuppert … (Kopplung wird geprüft)",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = modifier,
-        )
+        PairState.CHECKING -> Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+            Text("🐽", fontSize = 22.sp)
+            Spacer(Modifier.width(8.dp))
+            Caption("Dog-E schnuppert … (Kopplung wird geprüft)", color = MaterialTheme.colorScheme.onBackground)
+        }
         PairState.PAIRING -> {
-            // The nose emoji pulses so the child knows exactly what to do.
+            // The nose sticker pulses so the child knows exactly what to do.
             val nose by rememberInfiniteTransition(label = "nose").animateFloat(
-                initialValue = 0.85f, targetValue = 1.2f,
+                initialValue = 0.9f, targetValue = 1.1f,
                 animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse),
                 label = "noseScale",
             )
-            Row(
-                modifier
-                    .fillMaxWidth()
-                    .clip(MaterialTheme.shapes.large)
-                    .background(MaterialTheme.colorScheme.tertiaryContainer)
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("👃", fontSize = 48.sp, modifier = Modifier.scale(nose))
-                Spacer(Modifier.width(16.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        "🔔 Hörst du den Klingelton?",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                    )
-                    Text(
-                        "Drück jetzt Dog-Es Nase!",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                    )
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
+            PaperCard(modifier, container = MaterialTheme.colorScheme.secondaryContainer) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StickerBase(Modifier.scale(nose), diameter = 96.dp, rotation = -10f) {
+                        Text("👃", fontSize = 30.sp)
+                        Text("Nase\ndrücken!", style = MaterialTheme.typography.labelMedium, color = de.dogeapp.ui.theme.Ink, textAlign = TextAlign.Center)
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            "🔔 Hörst du den Klingelton?",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                        Text(
+                            "DRÜCK JETZT DOG-ES NASE!",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                        OrangeBar(null, Modifier.padding(top = 4.dp))
+                    }
                 }
             }
         }
-        PairState.NOT_PAIRED, PairState.UNKNOWN -> Row(
-            modifier
-                .fillMaxWidth()
-                .clip(MaterialTheme.shapes.large)
-                .background(MaterialTheme.colorScheme.secondaryContainer)
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text("🤝", fontSize = 36.sp)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    "Dog-E kennt dieses Gerät noch nicht",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                )
-                Text(
-                    "Tippe auf „Koppeln“ und drück danach Dog-Es Nase. Vorher klappt das Fahren evtl. nicht.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                )
+        PairState.NOT_PAIRED, PairState.UNKNOWN -> PaperCard(modifier, container = MaterialTheme.colorScheme.secondaryContainer) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                StickerBase(diameter = 76.dp, rotation = 8f) {
+                    Text("🤝", fontSize = 26.sp)
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "Dog-E kennt dieses Gerät noch nicht",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                    Text(
+                        "Tippe auf „Koppeln“ und drück danach Dog-Es Nase. Vorher klappt das Fahren evtl. nicht.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                }
             }
-            Spacer(Modifier.width(8.dp))
-            Button(onClick = onPair, modifier = Modifier.heightIn(min = 56.dp)) { Text("Koppeln") }
+            PillButton("Koppeln", onClick = onPair, modifier = Modifier.fillMaxWidth(), trailing = "👃", minHeight = 56.dp)
         }
     }
 }

@@ -1,5 +1,6 @@
 package de.dogeapp.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,6 +28,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,6 +58,7 @@ import de.dogeapp.ble.ConnState
 import de.dogeapp.data.CommandDef
 import de.dogeapp.data.DogeConfig
 import de.dogeapp.data.Hex
+import de.dogeapp.ui.theme.pastel
 import de.dogeapp.voice.Conversation
 
 /**
@@ -78,7 +82,11 @@ fun SettingsScreen(vm: DogeViewModel, onOpenExplorer: () -> Unit, modifier: Modi
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            SectionCard(emoji = "👧", title = "Für das Kind") {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+                PosterHeadline("Einstellungen", "für die Großen", Modifier.weight(1f), bigSize = 44.sp, scriptSize = 28.sp)
+                ScriptNote("psst!", Modifier.padding(bottom = 24.dp), rotation = 10f, fontSize = 24.sp)
+            }
+            SectionCard(emoji = "👧", title = "Für das Kind", colorIndex = 5) {
                 OutlinedTextField(
                     value = config.childName,
                     onValueChange = { v -> vm.updateConfig { it.copy(childName = v.take(30)) } },
@@ -99,7 +107,7 @@ fun SettingsScreen(vm: DogeViewModel, onOpenExplorer: () -> Unit, modifier: Modi
                 )
             }
 
-            SectionCard(emoji = "🌍", title = "Wetter & Witze") {
+            SectionCard(emoji = "🌍", title = "Wetter & Witze", colorIndex = 1) {
                 OutlinedTextField(
                     value = config.city,
                     onValueChange = { v -> vm.updateConfig { it.copy(city = v.take(60)) } },
@@ -108,7 +116,7 @@ fun SettingsScreen(vm: DogeViewModel, onOpenExplorer: () -> Unit, modifier: Modi
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                OutlinedButton(onClick = { vm.runReaction(Conversation.REACTIONS.first { it.id == "weather" }) }) {
+                InkOutlinedButton(onClick = { vm.runReaction(Conversation.REACTIONS.first { it.id == "weather" }) }) {
                     Text("🌦️ Wetter testen")
                 }
                 if (weatherText.isNotBlank()) Hint(weatherText)
@@ -120,7 +128,7 @@ fun SettingsScreen(vm: DogeViewModel, onOpenExplorer: () -> Unit, modifier: Modi
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { vm.refreshJokes() }) { Text("😂 Witze aktualisieren") }
+                    InkOutlinedButton(onClick = { vm.refreshJokes() }) { Text("😂 Witze aktualisieren") }
                     Text(jokesStatus, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                 }
                 Hint(
@@ -137,10 +145,10 @@ fun SettingsScreen(vm: DogeViewModel, onOpenExplorer: () -> Unit, modifier: Modi
     }
 }
 
-/** Collapsible card "Für Eltern / Experten". */
+/** Collapsible area "Für Eltern / Experten": dashed outline on the bare paper, clearly set apart. */
 @Composable
 private fun ExpertSection(open: Boolean, onToggle: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
-    SectionCard {
+    PaperCard(dashed = true) {
         Row(
             Modifier
                 .fillMaxWidth()
@@ -149,10 +157,10 @@ private fun ExpertSection(open: Boolean, onToggle: () -> Unit, content: @Composa
                 .heightIn(min = 56.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("🛠️", fontSize = 22.sp)
-            Spacer(Modifier.width(8.dp))
+            IconCircle("🛠️", pastel(1), size = 40.dp)
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text("Für Eltern / Experten", style = MaterialTheme.typography.titleLarge)
+                Text("FÜR ELTERN / EXPERTEN", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
                 Text(
                     "Bluetooth-Explorer, Rückwärts-Test, Sequenzen, Befehle, Import/Export",
                     style = MaterialTheme.typography.bodySmall,
@@ -162,10 +170,24 @@ private fun ExpertSection(open: Boolean, onToggle: () -> Unit, content: @Composa
             Icon(
                 if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
                 contentDescription = if (open) "Einklappen" else "Ausklappen",
+                tint = inkColor(),
             )
         }
+        if (!open) Caption("*nur für Profis (und neugierige Eltern)")
         if (open) content()
     }
+}
+
+/** Outlined button in ink (orange small text would be too faint on the cream paper). */
+@Composable
+private fun InkOutlinedButton(onClick: () -> Unit, content: @Composable RowScope.() -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier.heightIn(min = 48.dp),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = inkColor()),
+        border = BorderStroke(1.5.dp, inkColor()),
+        content = content,
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -243,7 +265,7 @@ private fun ColumnScope.ExpertContent(vm: DogeViewModel, onOpenExplorer: () -> U
             onTest = { vm.send(cmd) },
         )
     }
-    OutlinedButton(onClick = {
+    InkOutlinedButton(onClick = {
         vm.updateConfig { c ->
             c.copy(commands = c.commands + CommandDef("custom_${System.currentTimeMillis()}", "Neu", ""))
         }
@@ -253,8 +275,8 @@ private fun ColumnScope.ExpertContent(vm: DogeViewModel, onOpenExplorer: () -> U
     HorizontalDivider()
     SubTitle("💾 Sichern & Zurücksetzen")
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(onClick = { copyToClipboard(context, vm.exportConfig()) }) { Text("Export (Zwischenablage)") }
-        OutlinedButton(onClick = { importOpen = true }) { Text("Import") }
+        InkOutlinedButton(onClick = { copyToClipboard(context, vm.exportConfig()) }) { Text("Export (Zwischenablage)") }
+        InkOutlinedButton(onClick = { importOpen = true }) { Text("Import") }
         TextButton(onClick = { resetOpen = true }) { Text("Alles zurücksetzen", color = MaterialTheme.colorScheme.error) }
     }
 
@@ -320,7 +342,7 @@ private fun SequenceTester(vm: DogeViewModel) {
     val valid = id != null && id in 0..0xFFFF
     SubTitle("🔢 Sequenz ausprobieren")
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(onClick = { id?.let { text = (it - 1).coerceAtLeast(0).toString() } }) { Text("−") }
+        InkOutlinedButton(onClick = { id?.let { text = (it - 1).coerceAtLeast(0).toString() } }) { Text("−") }
         OutlinedTextField(
             value = text,
             onValueChange = { text = it },
@@ -329,7 +351,7 @@ private fun SequenceTester(vm: DogeViewModel) {
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.width(120.dp),
         )
-        OutlinedButton(onClick = { id?.let { text = (it + 1).coerceAtMost(0xFFFF).toString() } }) { Text("+") }
+        InkOutlinedButton(onClick = { id?.let { text = (it + 1).coerceAtMost(0xFFFF).toString() } }) { Text("+") }
     }
     Button(onClick = { id?.let { vm.playSequence(it) } }, enabled = valid, modifier = Modifier.heightIn(min = 48.dp)) {
         Text("▶ Abspielen")
@@ -342,7 +364,7 @@ private fun SequenceTester(vm: DogeViewModel) {
 
 @Composable
 private fun SubTitle(text: String) {
-    Text(text, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 4.dp))
+    Text(text, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(top = 4.dp))
 }
 
 /** Small explanatory text in the muted color. */
@@ -362,7 +384,7 @@ private fun SwitchRow(title: String, subtitle: String?, checked: Boolean, onChan
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
             if (subtitle != null) {
                 Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }

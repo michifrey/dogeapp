@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Window theme: purple status bar to match the gradient header. -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!--
+      Window theme (shown before Compose draws): cream "paper" with dark status/navigation icons.
+      At runtime enableEdgeToEdge() makes the bars transparent over the same paper colour.
+    -->
     <style name="Theme.DogE" parent="@android:style/Theme.Material.Light.NoActionBar">
-        <item name="android:statusBarColor">#FF7C3AED</item>
-        <item name="android:navigationBarColor">#FFFFFBFF</item>
-        <item name="android:windowBackground">#FFF5EEFF</item>
-        <item name="android:colorAccent">#FF7C3AED</item>
+        <item name="android:statusBarColor">#FFF6EBD9</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">#FFFBF3E6</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">true</item>
+        <item name="android:windowBackground">#FFF6EBD9</item>
+        <item name="android:colorAccent">#FFD84B1A</item>
     </style>
 </resources>

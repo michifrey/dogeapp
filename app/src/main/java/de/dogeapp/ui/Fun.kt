@@ -19,7 +19,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -60,7 +59,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -75,8 +74,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.dogeapp.ble.ConnState
 import de.dogeapp.data.CommandDef
-import de.dogeapp.ui.theme.FunGradient
-import de.dogeapp.ui.theme.Mint
+import de.dogeapp.ui.theme.DisplayFont
+import de.dogeapp.ui.theme.DoneGreen
+import de.dogeapp.ui.theme.Orange
+import de.dogeapp.ui.theme.ScriptStyle
+import de.dogeapp.ui.theme.pastel
 import kotlinx.coroutines.delay
 
 // ---------------------------------------------------------------------------------------------
@@ -118,40 +120,44 @@ fun shortLabel(cmd: CommandDef): String {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Header
+// Header: small wordmark left, compact connection + battery pills right
 // ---------------------------------------------------------------------------------------------
 
-/** Gradient title bar (the brand moment of the app) with connection state and battery pills. */
+/**
+ * Slim transparent top row on the paper: "DOG-E 🐾" wordmark and compact status pills
+ * (connection, battery – tap the battery to refresh). The big poster headline lives in each page.
+ */
 @Composable
 fun TopHeader(vm: DogeViewModel) {
     val state by vm.ble.state.collectAsStateWithLifecycle()
     val scanning by vm.ble.scanning.collectAsStateWithLifecycle()
     val battery by vm.battery.collectAsStateWithLifecycle()
     val connected = state == ConnState.READY
+    val ink = inkColor()
     Row(
         Modifier
             .fillMaxWidth()
-            .background(FunGradient)
-            .statusBarsPadding() // gradient continues behind the status bar
+            .statusBarsPadding()
             .heightIn(min = 56.dp)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(start = 16.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        WobblyDog(size = 28.sp)
-        Spacer(Modifier.width(8.dp))
-        Text(
-            "Dog-E Control",
-            color = Color.White,
-            style = MaterialTheme.typography.titleLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-        HeaderPill {
+        Text("DOG-E", fontFamily = DisplayFont, fontSize = 24.sp, color = ink, maxLines = 1)
+        Spacer(Modifier.width(4.dp))
+        Text("🐾", fontSize = 18.sp, modifier = Modifier.rotate(-12f))
+        Spacer(Modifier.weight(1f))
+        StatusPill {
             Box(
                 Modifier
                     .size(10.dp)
-                    .background(if (connected) Mint else Color.White.copy(alpha = 0.55f), CircleShape)
+                    .background(
+                        when {
+                            connected -> DoneGreen
+                            state != ConnState.DISCONNECTED || scanning -> Orange
+                            else -> MaterialTheme.colorScheme.outline
+                        },
+                        CircleShape,
+                    )
             )
             Spacer(Modifier.width(6.dp))
             Text(
@@ -160,16 +166,15 @@ fun TopHeader(vm: DogeViewModel) {
                     ConnState.CONNECTING, ConnState.DISCOVERING -> "verbinde …"
                     ConnState.DISCONNECTED -> if (scanning) "suche …" else "nicht verbunden"
                 },
-                color = Color.White,
-                style = MaterialTheme.typography.labelLarge,
+                color = ink,
+                style = MaterialTheme.typography.labelMedium,
                 maxLines = 1,
             )
         }
         val level = battery
         if (connected && level != null) {
-            Spacer(Modifier.width(8.dp))
-            // Tap the battery pill to ask the dog for a fresh value.
-            HeaderPill(onClick = { vm.requestBattery() }) {
+            Spacer(Modifier.width(6.dp))
+            StatusPill(onClick = { vm.requestBattery() }) {
                 Icon(
                     when {
                         level >= 70 -> Icons.Filled.BatteryFull
@@ -177,26 +182,27 @@ fun TopHeader(vm: DogeViewModel) {
                         else -> Icons.Filled.Battery2Bar
                     },
                     contentDescription = "Akku",
-                    tint = if (level < 20) Color(0xFFFFD1D1) else Color.White,
-                    modifier = Modifier.size(18.dp),
+                    tint = if (level < 20) MaterialTheme.colorScheme.error else ink,
+                    modifier = Modifier.size(16.dp),
                 )
                 Spacer(Modifier.width(2.dp))
-                Text("$level %", color = Color.White, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                Text("$level %", color = ink, style = MaterialTheme.typography.labelMedium, maxLines = 1)
             }
         }
     }
 }
 
+/** Small outlined paper pill for the header status. */
 @Composable
-private fun HeaderPill(onClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
-    val base = Modifier
-        .clip(RoundedCornerShape(50))
-        .background(Color.White.copy(alpha = 0.22f))
-    Row(
-        (if (onClick != null) base.clickable(onClick = onClick) else base)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) { content() }
+fun StatusPill(onClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
+    val shape = RoundedCornerShape(50)
+    var m = Modifier
+        .heightIn(min = 36.dp)
+        .clip(shape)
+        .background(MaterialTheme.colorScheme.surface)
+        .border(1.5.dp, inkColor(), shape)
+    if (onClick != null) m = m.clickable(onClick = onClick)
+    Row(m.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) { content() }
 }
 
 /** A dog emoji that gently tilts back and forth. */
@@ -215,51 +221,50 @@ fun WobblyDog(size: TextUnit = 40.sp, emoji: String = "🐶") {
 // Cards & titles
 // ---------------------------------------------------------------------------------------------
 
-/** Section title with an emoji. */
+/** Section title: emoji in a pastel circle + condensed uppercase title. */
 @Composable
-fun SectionTitle(emoji: String, text: String, modifier: Modifier = Modifier) {
+fun SectionTitle(emoji: String, text: String, modifier: Modifier = Modifier, colorIndex: Int = 2) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         if (emoji.isNotEmpty()) {
-            Text(emoji, fontSize = 22.sp)
-            Spacer(Modifier.width(8.dp))
+            IconCircle(emoji, pastel(colorIndex), size = 40.dp)
+            Spacer(Modifier.width(12.dp))
         }
-        Text(text, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+        Text(
+            text.uppercase(),
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
     }
 }
 
 /**
- * The one card style used everywhere: calm tonal surface, large rounded corners, 16 dp padding,
- * 12 dp between children. Optional emoji + title on top.
+ * The one card style used everywhere: cream paper card with thin outline, 16 dp corners,
+ * 16 dp padding, 12 dp between children. Optional emoji + title on top.
  */
 @Composable
 fun SectionCard(
     modifier: Modifier = Modifier,
     emoji: String = "",
     title: String? = null,
+    colorIndex: Int = 2,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(
-        modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.large)
-            .background(MaterialTheme.colorScheme.surfaceContainerLow)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.large)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        if (title != null) SectionTitle(emoji, title)
+    PaperCard(modifier) {
+        if (title != null) SectionTitle(emoji, title, colorIndex = colorIndex)
         content()
     }
 }
 
-/** Small tonal hint box (e.g. "Bitte am Hund bestätigen"). */
+/** Small butter-yellow hint box (e.g. "Dog-E ist nicht verbunden"). */
 @Composable
 fun HintBox(text: String, modifier: Modifier = Modifier, action: (@Composable () -> Unit)? = null) {
+    val shape = MaterialTheme.shapes.medium
     Row(
         modifier
             .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
+            .clip(shape)
             .background(MaterialTheme.colorScheme.secondaryContainer)
+            .dashedBorder(MaterialTheme.colorScheme.outline, 1.5.dp, 16.dp)
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .heightIn(min = 40.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -281,36 +286,16 @@ fun HintBox(text: String, modifier: Modifier = Modifier, action: (@Composable ()
 // Buttons
 // ---------------------------------------------------------------------------------------------
 
-/** The primary call to action of a screen: brand gradient, 64 dp high, white bold text. */
+/** The primary call to action of a screen: the orange pill. Kept for older call sites. */
 @Composable
 fun BrandButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.96f else 1f, spring(dampingRatio = 0.5f), label = "cta")
-    Box(
-        modifier
-            .scale(scale)
-            .alpha(if (enabled) 1f else 0.5f)
-            .heightIn(min = 64.dp)
-            .clip(MaterialTheme.shapes.large)
-            .background(FunGradient)
-            .clickable(
-                interactionSource = interaction,
-                indication = LocalIndication.current,
-                enabled = enabled,
-                role = Role.Button,
-                onClick = onClick,
-            )
-            .padding(horizontal = 24.dp, vertical = 12.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(text, color = Color.White, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
-    }
+    PillButton(text, onClick, modifier, enabled = enabled, trailing = "🐾")
 }
 
 /**
- * Equal-size toy tile for tricks and conversations: emoji in a colored circle, label below
- * (max. two lines, never clipped mid-word on a phone), bounces when pressed.
+ * Equal-size toy tile for tricks and conversations: cream outlined card with the emoji in a pastel
+ * circle. Wide cells (≥ 150 dp) are laid out like the subject rows of the poster (circle left,
+ * label right), narrow cells stack circle and label. Bounces when pressed.
  * Fills the width it gets – put it into an [EqualGrid].
  */
 @Composable
@@ -321,51 +306,64 @@ fun ToyTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    height: Dp = 108.dp,
+    height: Dp = 84.dp,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.9f else 1f, spring(dampingRatio = 0.4f), label = "press")
-    val dark = isSystemInDarkTheme()
-    val container = accent.copy(alpha = if (dark) 0.24f else 0.12f)
-        .compositeOver(MaterialTheme.colorScheme.surfaceContainerLowest)
-    val shape = MaterialTheme.shapes.large
-    Column(
+    val scale by animateFloatAsState(if (pressed) 0.92f else 1f, spring(dampingRatio = 0.4f), label = "press")
+    val shape = MaterialTheme.shapes.medium
+    BoxWithConstraints(
         modifier
             .fillMaxWidth()
-            .height(height)
+            .heightIn(min = height)
             .scale(scale)
             .alpha(if (enabled) 1f else 0.4f)
             .clip(shape)
-            .background(container)
-            .border(1.5.dp, accent.copy(alpha = if (dark) 0.6f else 0.4f), shape)
+            .background(if (pressed) accent else MaterialTheme.colorScheme.surface)
+            .border(1.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f), shape)
             .clickable(
                 interactionSource = interaction,
                 indication = LocalIndication.current,
                 enabled = enabled,
                 role = Role.Button,
                 onClick = onClick,
-            )
-            .padding(horizontal = 4.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+            ),
+        contentAlignment = Alignment.Center,
     ) {
-        Box(
-            Modifier.size(44.dp).background(accent.copy(alpha = if (dark) 0.45f else 0.22f), CircleShape),
-            contentAlignment = Alignment.Center,
-        ) { Text(emoji, fontSize = 24.sp) }
-        Spacer(Modifier.height(4.dp))
-        Text(
-            label,
-            color = MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.labelLarge,
-            // Long single words get a slightly smaller font instead of being cut off.
-            fontSize = if (label.length > 11) 14.sp else 16.sp,
-            lineHeight = 18.sp,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
+        val wide = maxWidth >= 150.dp
+        val text: @Composable (TextAlign) -> Unit = { align ->
+            Text(
+                label,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.labelLarge,
+                // Long single words get a slightly smaller font instead of being cut off.
+                fontSize = if (label.length > 11) 15.sp else 17.sp,
+                lineHeight = 19.sp,
+                textAlign = align,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (wide) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconCircle(emoji, accent, size = 48.dp)
+                Spacer(Modifier.width(12.dp))
+                Box(Modifier.weight(1f)) { text(TextAlign.Start) }
+            }
+        } else {
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                IconCircle(emoji, accent, size = 44.dp)
+                Spacer(Modifier.height(4.dp))
+                text(TextAlign.Center)
+            }
+        }
     }
 }
 
@@ -380,20 +378,24 @@ fun HoldPad(
     onRelease: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    shape: Shape = RoundedCornerShape(28.dp),
+    outline: Color? = null,
     content: @Composable ColumnScope.(pressed: Boolean) -> Unit,
 ) {
     var pressed by remember { mutableStateOf(false) }
     val press by rememberUpdatedState(onPress)
     val release by rememberUpdatedState(onRelease)
     val scale by animateFloatAsState(if (pressed) 0.94f else 1f, spring(dampingRatio = 0.45f), label = "hold")
+    var m = modifier
+        .scale(scale)
+        .alpha(if (enabled) 1f else 0.4f)
+        .clip(shape)
+        .background(brush)
+        // Darken a little while pressed so the child sees the button is "on".
+        .background(if (pressed) Color.Black.copy(alpha = 0.18f) else Color.Transparent)
+    if (outline != null) m = m.border(2.dp, outline, shape)
     Column(
-        modifier
-            .scale(scale)
-            .alpha(if (enabled) 1f else 0.4f)
-            .clip(MaterialTheme.shapes.large)
-            .background(brush)
-            // Darken a little while pressed so the child sees the button is "on".
-            .background(if (pressed) Color.Black.copy(alpha = 0.18f) else Color.Transparent)
+        m
             .semantics(mergeDescendants = true) { role = Role.Button }
             .pointerInput(enabled) {
                 if (!enabled) return@pointerInput
@@ -424,7 +426,7 @@ fun <T> EqualGrid(
     items: List<T>,
     minCellWidth: Dp,
     modifier: Modifier = Modifier,
-    spacing: Dp = 8.dp,
+    spacing: Dp = 10.dp,
     cell: @Composable (index: Int, item: T) -> Unit,
 ) {
     BoxWithConstraints(modifier.fillMaxWidth()) {
@@ -471,7 +473,7 @@ class FeedbackState {
 /** Provided once in MainActivity; screens call `LocalFeedback.current.show("…")`. */
 val LocalFeedback = staticCompositionLocalOf { FeedbackState() }
 
-/** Toast-like pill that slides in from the bottom and hides itself after 1.6 s. */
+/** Ink pill that slides in from the bottom (slightly tilted, like a taped note) and hides after 1.6 s. */
 @Composable
 fun FeedbackBanner(state: FeedbackState, modifier: Modifier = Modifier) {
     LaunchedEffect(state.id) {
@@ -492,9 +494,18 @@ fun FeedbackBanner(state: FeedbackState, modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
+                .rotate(-2f)
                 .clip(RoundedCornerShape(50))
                 .background(MaterialTheme.colorScheme.inverseSurface)
+                .border(2.dp, Orange, RoundedCornerShape(50))
                 .padding(horizontal = 24.dp, vertical = 12.dp),
         )
     }
 }
+
+/** Small hand-written caption (e.g. "gedrückt halten" under a pad). */
+@Composable
+fun Caption(text: String, modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.onSurfaceVariant) {
+    Text(text, style = ScriptStyle.copy(fontSize = 20.sp, lineHeight = 22.sp), color = color, modifier = modifier)
+}
+

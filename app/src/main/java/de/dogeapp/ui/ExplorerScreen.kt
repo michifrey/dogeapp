@@ -12,12 +12,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -65,11 +64,11 @@ fun ExplorerScreen(vm: DogeViewModel, modifier: Modifier = Modifier) {
 
         HorizontalDivider(Modifier.padding(vertical = 4.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Log", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            TextButton(onClick = { copyToClipboard(context, log.joinToString("\n") { "${it.time} ${it.text}" }) }) {
+            Text("LOG", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1f))
+            TextButton(colors = ButtonDefaults.textButtonColors(contentColor = inkColor()), onClick = { copyToClipboard(context, log.joinToString("\n") { "${it.time} ${it.text}" }) }) {
                 Text("Kopieren")
             }
-            TextButton(onClick = { vm.ble.clearLog() }) { Text("Leeren") }
+            TextButton(colors = ButtonDefaults.textButtonColors(contentColor = inkColor()), onClick = { vm.ble.clearLog() }) { Text("Leeren") }
         }
         val listState = rememberLazyListState()
         LaunchedEffect(log.size) { if (log.isNotEmpty()) listState.scrollToItem(log.size - 1) }
@@ -79,6 +78,7 @@ fun ExplorerScreen(vm: DogeViewModel, modifier: Modifier = Modifier) {
                     "${line.time} ${line.text}",
                     fontFamily = FontFamily.Monospace,
                     style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground,
                 )
             }
         }
@@ -92,36 +92,34 @@ private fun isControl(c: CharInfo, config: DogeConfig) =
 private fun CharCard(c: CharInfo, isControl: Boolean, vm: DogeViewModel) {
     var hex by rememberSaveable(c.serviceUuid + c.uuid) { mutableStateOf("") }
     val writable = c.canWrite || c.canWriteNoResponse
-    Card(
-        Modifier.fillMaxWidth(),
-        colors = if (isControl) CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-        else CardDefaults.cardColors(),
+    PaperCard(
+        container = if (isControl) MaterialTheme.colorScheme.secondaryContainer else null,
+        padding = 12.dp,
+        spacing = 4.dp,
     ) {
-        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                BleManager.shortUuid(c.uuid) + if (isControl) "  (Steuer-Kanal)" else "",
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
+        Text(
+            BleManager.shortUuid(c.uuid) + if (isControl) "  (Steuer-Kanal)" else "",
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            "Service ${BleManager.shortUuid(c.serviceUuid)} · ${c.propertyLabel}",
+            style = MaterialTheme.typography.bodySmall,
+        )
+        if (writable) {
+            OutlinedTextField(
+                value = hex,
+                onValueChange = { hex = it },
+                label = { Text("Hex-Bytes, z. B. 01 FF 00") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
             )
-            Text(
-                "Service ${BleManager.shortUuid(c.serviceUuid)} · ${c.propertyLabel}",
-                style = MaterialTheme.typography.bodySmall,
-            )
-            if (writable) {
-                OutlinedTextField(
-                    value = hex,
-                    onValueChange = { hex = it },
-                    label = { Text("Hex-Bytes, z. B. 01 FF 00") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
-                )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (writable) TextButton(onClick = { vm.rawWrite(c, hex) }) { Text("Senden") }
-                if (c.canRead) TextButton(onClick = { vm.ble.read(c.serviceUuid, c.uuid) }) { Text("Lesen") }
-                if (writable && !isControl) TextButton(onClick = { vm.useAsControlChannel(c) }) { Text("Als Steuer-Kanal") }
-            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (writable) TextButton(colors = ButtonDefaults.textButtonColors(contentColor = inkColor()), onClick = { vm.rawWrite(c, hex) }) { Text("Senden") }
+            if (c.canRead) TextButton(colors = ButtonDefaults.textButtonColors(contentColor = inkColor()), onClick = { vm.ble.read(c.serviceUuid, c.uuid) }) { Text("Lesen") }
+            if (writable && !isControl) TextButton(colors = ButtonDefaults.textButtonColors(contentColor = inkColor()), onClick = { vm.useAsControlChannel(c) }) { Text("Als Steuer-Kanal") }
         }
     }
 }

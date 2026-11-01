@@ -21,8 +21,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.TextButton
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
@@ -32,8 +30,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.semantics.Role
+import de.dogeapp.ui.theme.Ink
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -104,91 +107,126 @@ fun LedScreen(vm: DogeViewModel, onConnect: () -> Unit, modifier: Modifier = Mod
 
     BoxWithConstraints(modifier) {
         val wide = maxWidth >= 700.dp
+        val hero: @Composable () -> Unit = {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+                PosterHeadline(
+                    "Licht an!",
+                    "in deiner Lieblingsfarbe",
+                    modifier = Modifier.weight(1f),
+                    bigSize = if (wide) 64.sp else 48.sp,
+                    scriptSize = if (wide) 38.sp else 28.sp,
+                )
+                Box {
+                    MascotWithNote("so schön!", size = if (wide) 140.dp else 96.dp)
+                    DoodleStar(Modifier.align(Alignment.TopEnd).size(18.dp), points = 8)
+                }
+            }
+        }
         val notConnected: @Composable () -> Unit = {
             if (!connected) {
                 HintBox("Dog-E ist nicht verbunden – die Farben leuchten erst nach dem Verbinden.") {
-                    TextButton(onClick = onConnect) { Text("Verbinden") }
+                    InkTextButton("Verbinden", onClick = onConnect)
                 }
             }
         }
         val groups: @Composable () -> Unit = {
-            SectionCard(emoji = "💡", title = "Welche Lichter?") {
+            SectionCard(emoji = "💡", title = "Welche Lichter?", colorIndex = 2) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     GROUPS.forEachIndexed { i, (label, _) ->
-                        FilterChip(
-                            selected = group == i,
-                            onClick = { group = i },
-                            label = { Text(label, style = MaterialTheme.typography.labelLarge) },
-                            modifier = Modifier.heightIn(min = 48.dp),
-                        )
+                        GroupPill(label, selected = group == i, onClick = { group = i })
                     }
                 }
                 DogPreview(leds)
             }
         }
         val wheel: @Composable () -> Unit = {
-            SectionCard(emoji = "🎨", title = "Farbe malen") {
+            SectionCard(emoji = "🎨", title = "Farbe malen", colorIndex = 3) {
                 Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ColorWheel(
-                        hue = hue, saturation = sat,
-                        onChange = { h, s -> hue = h; sat = s; sendColor() },
-                        modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth().aspectRatio(1f),
-                    )
+                    Box(Modifier.widthIn(max = 420.dp).fillMaxWidth()) {
+                        ColorWheel(
+                            hue = hue, saturation = sat,
+                            onChange = { h, s -> hue = h; sat = s; sendColor() },
+                            modifier = Modifier.fillMaxWidth().aspectRatio(1f).padding(12.dp),
+                        )
+                        Caption(
+                            "tipp mich!",
+                            Modifier.align(Alignment.TopStart).rotate(-12f),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        DoodleBurst(Modifier.align(Alignment.TopEnd))
+                    }
                     Row(Modifier.widthIn(max = 420.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text("🌑", fontSize = 20.sp)
+                        Text("🌑", fontSize = 22.sp)
                         Slider(
                             value = value,
                             onValueChange = { value = it; sendColor() },
                             valueRange = 0.05f..1f,
                             modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
                         )
-                        Text("☀️", fontSize = 20.sp)
+                        Text("☀️", fontSize = 22.sp)
                     }
                 }
             }
         }
         val palette: @Composable () -> Unit = {
-            SectionCard(emoji = "🖍️", title = "Schnellfarben") {
-                EqualGrid(PALETTE, minCellWidth = 64.dp) { _, (name, rgb) ->
+            SectionCard(emoji = "🖍️", title = "Schnellfarben", colorIndex = 4) {
+                EqualGrid(PALETTE, minCellWidth = 68.dp, spacing = 6.dp) { i, (name, rgb) ->
+                    val fill = rgbColor(rgb)
                     Column(
                         Modifier
                             .fillMaxWidth()
                             .clip(MaterialTheme.shapes.medium)
-                            .clickable { vm.setLedColor(targets, rgb); feedback.show("💡 $name") }
+                            .clickable(role = Role.Button) { vm.setLedColor(targets, rgb); feedback.show("💡 $name") }
                             .padding(vertical = 4.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Box(
-                            Modifier
-                                .size(48.dp)
-                                .background(rgbColor(rgb), CircleShape)
-                                .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
+                        // Little round colour sticker, each one tilted a bit differently.
+                        StickerBase(
+                            diameter = 54.dp,
+                            rotation = ((i * 37) % 21 - 10).toFloat(),
+                            fill = fill,
+                            ring = if (fill.luminance() < 0.4f) Color.White else Ink,
+                            outline = MaterialTheme.colorScheme.outline,
+                        ) {}
+                        Text(
+                            name,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
-                        Text(name, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
-                FilledTonalButton(
+                PillButton(
+                    "Regenbogen",
                     onClick = { vm.rainbow(); feedback.show("🌈 Regenbogen!") },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
-                ) { Text("🌈 Regenbogen", style = MaterialTheme.typography.titleMedium) }
+                    modifier = Modifier.fillMaxWidth(),
+                    trailing = "🌈",
+                    minHeight = 56.dp,
+                )
             }
         }
         if (wide) {
-            Row(Modifier.fillMaxSize().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Column(
-                    Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) { notConnected(); wheel() }
-                Column(
-                    Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) { groups(); palette(); Spacer(Modifier.height(64.dp)) }
+            Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+                hero()
+                Spacer(Modifier.height(12.dp))
+                Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Column(
+                        Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                    ) { notConnected(); wheel(); Spacer(Modifier.height(64.dp)) }
+                    Column(
+                        Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                    ) { groups(); palette(); Spacer(Modifier.height(64.dp)) }
+                }
             }
         } else {
             Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp).padding(top = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
+                hero()
                 notConnected()
                 groups()
                 wheel()
@@ -196,6 +234,25 @@ fun LedScreen(vm: DogeViewModel, onConnect: () -> Unit, modifier: Modifier = Mod
                 Spacer(Modifier.height(64.dp))
             }
         }
+    }
+}
+
+/** Selectable pill for the LED group (orange when chosen, outlined otherwise). */
+@Composable
+private fun GroupPill(label: String, selected: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(50)
+    val ink = inkColor()
+    Box(
+        Modifier
+            .heightIn(min = 48.dp)
+            .clip(shape)
+            .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
+            .border(2.dp, if (selected) MaterialTheme.colorScheme.primary else ink, shape)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, style = MaterialTheme.typography.labelLarge, color = if (selected) Color.White else ink)
     }
 }
 
@@ -211,6 +268,7 @@ fun ColorWheel(hue: Float, saturation: Float, onChange: (Float, Float) -> Unit, 
         latestOnChange(angle, (hypot(dx, dy) / r).coerceIn(0f, 1f))
     }
     val hues = remember { (0..360 step 30).map { Color.hsv(it % 360f, 1f, 1f) } }
+    val ring = inkColor()
     Canvas(
         modifier
             .pointerInput(Unit) { detectTapGestures { pick(it, size.width.toFloat(), size.height.toFloat()) } }
@@ -222,6 +280,7 @@ fun ColorWheel(hue: Float, saturation: Float, onChange: (Float, Float) -> Unit, 
         val c = Offset(size.width / 2, size.height / 2)
         drawCircle(Brush.sweepGradient(hues, c), r, c)
         drawCircle(Brush.radialGradient(listOf(Color.White, Color.White.copy(alpha = 0f)), c, r), r, c)
+        drawCircle(ring, r, c, style = Stroke(2.dp.toPx()))
         val a = Math.toRadians(hue.toDouble())
         val p = Offset(c.x + (cos(a) * saturation * r).toFloat(), c.y + (sin(a) * saturation * r).toFloat())
         drawCircle(Color.hsv(hue, saturation, 1f), 18.dp.toPx(), p)
@@ -239,14 +298,15 @@ private fun DogPreview(leds: Map<LedTarget, Int>) {
             Modifier
                 .size(30.dp)
                 .background(rgbColor(leds[t] ?: 0), CircleShape)
-                .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape),
+                .border(2.dp, inkColor(), CircleShape),
         )
-        Text(t.label, style = MaterialTheme.typography.labelSmall)
+        Text(t.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
     }
     Column(
         Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.shapes.medium)
+            .dashedBorder(MaterialTheme.colorScheme.outline, 1.5.dp, 16.dp)
             .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
