@@ -31,6 +31,8 @@ data class DogeConfig(
     /** Part of the advertised name used to highlight the dog in the scan list ("Mint Dog"). */
     val nameHint: String = "dog",
     val commands: List<CommandDef> = DEFAULT_COMMANDS,
+    /** Name of the child, used for the greeting. */
+    val childName: String = "",
 ) {
     val hasWriteTarget: Boolean get() = writeServiceUuid.isNotBlank() && writeCharUuid.isNotBlank()
 
@@ -81,6 +83,7 @@ class ConfigRepository(context: Context) {
         put("writeWithoutResponse", c.writeWithoutResponse)
         put("repeatIntervalMs", c.repeatIntervalMs)
         put("nameHint", c.nameHint)
+        put("childName", c.childName)
         put("commands", JSONArray().apply {
             c.commands.forEach {
                 put(JSONObject().put("id", it.id).put("label", it.label).put("hex", it.hex))
@@ -103,6 +106,7 @@ class ConfigRepository(context: Context) {
             repeatIntervalMs = o.optLong("repeatIntervalMs", defaults.repeatIntervalMs),
             nameHint = o.optString("nameHint", defaults.nameHint),
             commands = cmds,
+            childName = o.optString("childName", ""),
         )
     }
 

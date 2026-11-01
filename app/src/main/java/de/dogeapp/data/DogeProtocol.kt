@@ -24,6 +24,11 @@ object DogeProtocol {
     const val CMD_PLAY_SEQUENCE = 0x05
     const val CMD_SET_LED = 0x06
     const val CMD_MOTOR = 0x0A
+    const val CMD_BATTERY = 0x0D
+    const val CMD_VOLUME = 0x0E
+
+    /** Volume range used by the app (the official app's slider starts at 9). */
+    const val VOLUME_MAX = 10
 
     const val MOTOR_DRIVE = 1
     const val MOTOR_HEAD = 2
@@ -73,6 +78,17 @@ object DogeProtocol {
             listOf((c shr 16) and 0xFF, (c shr 8) and 0xFF, c and 0xFF)
         } + listOf(deciseconds and 0xFF, (deciseconds shr 8) and 0xFF)
         return packet(CMD_SET_LED, *payload.toIntArray())
+    }
+
+    /** Asks for the battery level; the dog answers FF .. 0D <level> .. */
+    fun requestBattery() = packet(CMD_BATTERY, 0)
+
+    fun setVolume(volume: Int) = packet(CMD_VOLUME, volume.coerceIn(0, 255))
+
+    /** Battery level from an answer packet, or null if [data] is something else. */
+    fun parseBattery(data: ByteArray): Int? {
+        if (data.size < 5 || data[0] != 0xFF.toByte() || data[2].toInt() != CMD_BATTERY) return null
+        return data[3].toInt() and 0xFF
     }
 
     /** "Am I already paired?" – sent right after connecting, with a 6-byte ID identifying this phone. */

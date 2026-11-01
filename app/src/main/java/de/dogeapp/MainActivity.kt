@@ -21,7 +21,7 @@ import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Gamepad
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -58,7 +58,7 @@ private enum class Tab(val label: String, val icon: ImageVector) {
     CONTROL("Steuern", Icons.Filled.Gamepad),
     LIGHT("Licht", Icons.Filled.Lightbulb),
     EXPLORER("Explorer", Icons.Filled.Search),
-    COMMANDS("Befehle", Icons.Filled.Tune),
+    COMMANDS("Einstellungen", Icons.Filled.Settings),
 }
 
 class MainActivity : ComponentActivity() {
@@ -125,9 +125,10 @@ private fun App(onEnableBluetooth: () -> Unit) {
                 vm,
                 onEnableBluetooth,
                 onConnected = { tab = if (vm.config.value.hasWriteTarget) Tab.CONTROL else Tab.EXPLORER },
+                onOpenSettings = { tab = Tab.COMMANDS },
                 modifier = mod,
             )
-            Tab.CONTROL -> ControlScreen(vm, mod)
+            Tab.CONTROL -> ControlScreen(vm, onOpenSettings = { tab = Tab.COMMANDS }, modifier = mod)
             Tab.LIGHT -> LedScreen(vm, mod)
             Tab.EXPLORER -> ExplorerScreen(vm, mod)
             Tab.COMMANDS -> CommandsScreen(vm, mod)

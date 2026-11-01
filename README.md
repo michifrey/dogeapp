@@ -12,13 +12,13 @@ Sie ist als Ersatz gedacht, weil die offizielle App (`com.wowwee.doge_robot`) f�
 | Tab | Was er macht |
 |-----|--------------|
 | **Verbinden** | Sucht BLE-Geräte, hebt den Hund hervor und verbindet sich. |
-| **Steuern** | Fahren und Kopf (gedrückt halten, loslassen = Stopp), Trick-Knöpfe und ein Sequenz-Tester, um weitere Tricks und Sounds per Nummer zu finden. |
+| **Steuern** | Begrüßung mit dem Namen des Kindes, Akkustand, Lautstärke, Fahren und Kopf (gedrückt halten, loslassen = Stopp), Trick-Knöpfe und ein Sequenz-Tester, um weitere Tricks und Sounds per Nummer zu finden. |
 | **Licht** | Farbrad + Helligkeit für alle sechs LEDs (Augen, Brust, Schwanz, Füße) einzeln oder zusammen, Schnellfarben und Regenbogen. |
 | **Explorer** | Zeigt alle Services und Characteristics. Du kannst rohe Hex-Bytes senden, Werte lesen und den Steuer-Kanal festlegen. Alle Benachrichtigungen des Hundes landen im Log, das du kopieren kannst. |
-| **Befehle** | Befehlstabelle bearbeiten (Name + Hex-Bytes), Befehle hinzufügen und testen, Konfiguration als JSON exportieren und importieren. |
+| **Einstellungen** | Name des Kindes für die Begrüßung, Befehlstabelle bearbeiten (Name + Hex-Bytes), Befehle hinzufügen und testen, Konfiguration als JSON exportieren und importieren. |
 
 **Sprachsteuerung** (Tab *Steuern*): Schalter einschalten, Mikrofon erlauben, dann z. B. „Bell!“, „Furz mal!“,
-„Komm her“, „Stopp“, „Augen blau“, „Licht aus“ oder „Regenbogen“ sagen. Die App hört dauerhaft zu, solange
+„Komm her“, „Stopp“, „Lauter“, „Leiser“, „Augen blau“, „Licht aus“ oder „Regenbogen“ sagen. Die App hört dauerhaft zu, solange
 sie offen ist, und nutzt die Spracherkennung des Geräts (bei Samsung meist Google-Spracheingabe; ohne
 Internet braucht es das deutsche Offline-Sprachpaket).
 

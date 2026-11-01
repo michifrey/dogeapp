@@ -15,6 +15,9 @@ sealed interface VoiceAction {
         override val description = "Licht $name"
     }
     data object Rainbow : VoiceAction { override val description = "Regenbogen-Licht" }
+    data class Volume(val delta: Int) : VoiceAction {
+        override val description = if (delta > 0) "Lauter" else "Leiser"
+    }
 }
 
 /**
@@ -55,6 +58,8 @@ object VoiceCommands {
         fun has(stems: List<String>) = words.any { w -> stems.any { w.startsWith(it) } }
 
         if (has(STOP)) return VoiceAction.Stop
+        if (has(listOf("lauter"))) return VoiceAction.Volume(+2)
+        if (has(listOf("leiser"))) return VoiceAction.Volume(-2)
 
         // Light: needs a color word (or "regenbogen"), optionally a body part.
         val wantsLight = has(listOf("licht", "farbe", "leucht", "led", "lampe"))

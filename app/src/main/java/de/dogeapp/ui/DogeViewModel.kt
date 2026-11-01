@@ -58,8 +58,15 @@ class DogeViewModel(app: Application) : AndroidViewModel(app) {
                     pairingRequested = false
                     delay(500) // let the notification subscriptions finish first
                     checkPairing()
+                    // Battery: ask now and then every minute while connected.
+                    while (true) {
+                        delay(1500)
+                        requestBattery()
+                        delay(58_500)
+                    }
                 } else if (s == ConnState.DISCONNECTED) {
                     _pairState.value = PairState.UNKNOWN
+                    _battery.value = null
                 }
             }
         }
@@ -80,7 +87,36 @@ class DogeViewModel(app: Application) : AndroidViewModel(app) {
         sendRaw(DogeProtocol.pairingRequest())
     }
 
+    // ------------------------------------------------------------------ Battery & volume
+
+    private val _battery = MutableStateFlow<Int?>(null)
+    /** Last battery level reported by the dog (as sent, probably percent), null = unknown. */
+    val battery: StateFlow<Int?> = _battery.asStateFlow()
+
+    private val _volume = MutableStateFlow(
+        app.getSharedPreferences("doge_config", 0).getInt("volume", 9)
+    )
+    val volume: StateFlow<Int> = _volume.asStateFlow()
+
+    fun requestBattery() = sendRaw(DogeProtocol.requestBattery())
+
+    /** Updates the slider; the value is sent when [send] is true (on release) to avoid flooding. */
+    fun setVolume(v: Int, send: Boolean = true) {
+        val clamped = v.coerceIn(0, DogeProtocol.VOLUME_MAX)
+        _volume.value = clamped
+        if (send) {
+            sendRaw(DogeProtocol.setVolume(clamped))
+            getApplication<Application>().getSharedPreferences("doge_config", 0)
+                .edit().putInt("volume", clamped).apply()
+        }
+    }
+
     private fun onDogData(data: ByteArray) {
+        DogeProtocol.parseBattery(data)?.let {
+            _battery.value = it
+            ble.log("Akku: $it")
+            return
+        }
         when (val r = DogeProtocol.parseAuthReply(data) ?: return) {
             is DogeProtocol.AuthReply.Status -> {
                 if (r.authenticated) {
@@ -200,6 +236,7 @@ class DogeViewModel(app: Application) : AndroidViewModel(app) {
             is VoiceAction.Command -> cfg.command(action.cmd.id)?.let { send(it) } ?: send(action.cmd)
             is VoiceAction.Leds -> setLedColor(action.targets, action.rgb)
             VoiceAction.Rainbow -> rainbow()
+            is VoiceAction.Volume -> setVolume(_volume.value + action.delta)
         }
     }
 

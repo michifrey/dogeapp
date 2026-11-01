@@ -48,6 +48,22 @@ fun CommandsScreen(vm: DogeViewModel, modifier: Modifier = Modifier) {
         modifier.padding(16.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        Text("Begrüßung", style = MaterialTheme.typography.titleMedium)
+        OutlinedTextField(
+            value = config.childName,
+            onValueChange = { v -> vm.updateConfig { it.copy(childName = v.take(30)) } },
+            label = { Text("Name des Kindes") },
+            placeholder = { Text("z. B. Yara") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            if (config.childName.isBlank()) "Die App begrüßt das Kind dann mit seinem Namen."
+            else "Vorschau: ${greetingText(config.childName, java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY))}",
+            style = MaterialTheme.typography.bodySmall,
+        )
+
+        HorizontalDivider(Modifier.padding(vertical = 8.dp))
         Text("Steuer-Kanal", style = MaterialTheme.typography.titleMedium)
         OutlinedTextField(
             value = config.writeServiceUuid,

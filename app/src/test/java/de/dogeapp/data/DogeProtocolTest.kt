@@ -54,4 +54,12 @@ class DogeProtocolTest {
             hex(p),
         )
     }
+
+    @Test
+    fun batteryAndVolume() {
+        assertEquals("FF 03 0D 00 10", hex(DogeProtocol.requestBattery()))
+        assertEquals("FF 03 0E 09 1A", hex(DogeProtocol.setVolume(9)))
+        assertEquals(87, DogeProtocol.parseBattery(Hex.parse("FF 03 0D 57 67")!!))
+        assertEquals(null, DogeProtocol.parseBattery(Hex.parse("FF 03 0A 00 0D")!!))
+    }
 }

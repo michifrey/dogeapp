@@ -38,6 +38,7 @@ fun ConnectScreen(
     vm: DogeViewModel,
     onEnableBluetooth: () -> Unit,
     onConnected: () -> Unit,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val devices by vm.ble.devices.collectAsStateWithLifecycle()
@@ -55,6 +56,7 @@ fun ConnectScreen(
     }
 
     Column(modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        GreetingCard(config.childName, state == ConnState.READY, onOpenSettings)
         Text("Status: ${state.label()}${name?.let { if (state != ConnState.DISCONNECTED) " – $it" else "" } ?: ""}")
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {

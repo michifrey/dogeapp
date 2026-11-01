@@ -1,6 +1,11 @@
 package de.dogeapp.ui
 
 import android.Manifest
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material3.Slider
+import androidx.compose.material3.TextButton
+import de.dogeapp.data.DogeProtocol
+import kotlin.math.roundToInt
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -59,11 +64,13 @@ import de.dogeapp.data.DogeConfig
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ControlScreen(vm: DogeViewModel, modifier: Modifier = Modifier) {
+fun ControlScreen(vm: DogeViewModel, onOpenSettings: () -> Unit, modifier: Modifier = Modifier) {
     val config by vm.config.collectAsStateWithLifecycle()
     val state by vm.ble.state.collectAsStateWithLifecycle()
     val pair by vm.pairState.collectAsStateWithLifecycle()
     val log by vm.ble.log.collectAsStateWithLifecycle()
+    val battery by vm.battery.collectAsStateWithLifecycle()
+    val volume by vm.volume.collectAsStateWithLifecycle()
     val connected = state == ConnState.READY
 
     BoxWithConstraints(modifier.padding(16.dp)) {
@@ -73,6 +80,7 @@ fun ControlScreen(vm: DogeViewModel, modifier: Modifier = Modifier) {
 
         val left: @Composable () -> Unit = {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                GreetingCard(config.childName, connected, onOpenSettings)
                 if (!connected) {
                     Hint("Nicht verbunden. Zuerst im Tab \"Verbinden\" den Hund (\"Mint Dog\") auswählen.")
                 } else {
@@ -90,6 +98,26 @@ fun ControlScreen(vm: DogeViewModel, modifier: Modifier = Modifier) {
                     HoldButton(config.command(DogeConfig.STOP), Icons.Filled.Stop, vm, buttonSize, hold = false)
                 }
                 Text("Gedrückt halten zum Fahren bzw. Kopf bewegen", style = MaterialTheme.typography.bodySmall)
+                if (connected) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        BatteryBadge(battery)
+                        TextButton(onClick = { vm.requestBattery() }) { Text("Aktualisieren") }
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.VolumeUp, contentDescription = "Lautstärke")
+                    Spacer(Modifier.width(8.dp))
+                    Slider(
+                        value = volume.toFloat(),
+                        onValueChange = { vm.setVolume(it.roundToInt(), send = false) },
+                        onValueChangeFinished = { vm.setVolume(vm.volume.value) },
+                        valueRange = 0f..DogeProtocol.VOLUME_MAX.toFloat(),
+                        steps = DogeProtocol.VOLUME_MAX - 1,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("$volume")
+                }
                 VoicePanel(vm)
             }
         }
@@ -162,7 +190,7 @@ private fun VoicePanel(vm: DogeViewModel) {
         if (heard.isNotBlank()) Text(heard, style = MaterialTheme.typography.bodyMedium)
         Text(
             "Sag z. B.: \"Bell!\", \"Furz mal!\", \"Sing\", \"Heul\", \"Wedel\", \"Komm her\", \"Kopf\", \"Stopp\", " +
-                "\"Augen blau\", \"Licht rot\", \"Regenbogen\", \"Licht aus\" – oder den Namen eines eigenen Knopfs.",
+                "\"Augen blau\", \"Licht rot\", \"Lauter\", \"Leiser\", \"Regenbogen\", \"Licht aus\" – oder den Namen eines eigenen Knopfs.",
             style = MaterialTheme.typography.bodySmall,
         )
     }
@@ -193,7 +221,7 @@ private fun SequenceTester(vm: DogeViewModel) {
         }
         Text(
             "Bekannt: 106 Bellen, 114 Heulen, 115 Singen, 116 Furzen, 168 Schwanzwedeln. " +
-                "Gute Funde unter \"Befehle\" als neuen Knopf speichern.",
+                "Gute Funde unter \"Einstellungen\" als neuen Knopf speichern.",
             style = MaterialTheme.typography.bodySmall,
         )
     }
