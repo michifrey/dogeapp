@@ -23,7 +23,12 @@ object DogeProtocol {
     const val CMD_AUTH = 0x01
     const val CMD_PLAY_SEQUENCE = 0x05
     const val CMD_SET_LED = 0x06
+    const val CMD_LAUNCH_GAME = 0x08
+    const val CMD_TAIL = 0x09
     const val CMD_MOTOR = 0x0A
+    const val CMD_STOP_SEQUENCE = 0x0F
+    const val CMD_SLEEP = 0x10
+    const val CMD_FIRMWARE = 0x11
     const val CMD_BATTERY = 0x0D
     const val CMD_VOLUME = 0x0E
 
@@ -80,6 +85,50 @@ object DogeProtocol {
         return packet(CMD_SET_LED, *payload.toIntArray())
     }
 
+    /** Starts one of the games built into the dog (SendLaunchGame). */
+    fun launchGame(game: ToyGame) = packet(CMD_LAUNCH_GAME, game.id)
+
+    /** Stops running sequences/sounds (SendStopSequence). */
+    fun stopSequences() = packet(CMD_STOP_SEQUENCE, 0)
+
+    /** Puts the dog into low-power sleep (SendSetLowPowerSleep). */
+    fun sleep() = packet(CMD_SLEEP, 0)
+
+    /** Asks for the firmware version; the dog answers FF .. 11 … */
+    fun requestFirmware() = packet(CMD_FIRMWARE, 0)
+
+    /** Max characters for a tail message (keeps the packet small for one BLE write). */
+    const val TAIL_TEXT_MAX = 40
+
+    /**
+     * Scrolls [text] over the LED tail (SendPlayTailAnimation(string)):
+     * FF <len> 09 00 02 <text in code page 437> <cs>.
+     */
+    fun tailText(text: String): ByteArray {
+        val bytes = toCp437(text.take(TAIL_TEXT_MAX))
+        return packet(CMD_TAIL, 0, 2, *bytes.map { it.toInt() and 0xFF }.toIntArray())
+    }
+
+    /** Stops the tail animation (SendStopTailAnimation): FF 03 09 02 <cs>. */
+    fun stopTail() = packet(CMD_TAIL, 2)
+
+    /** Text → IBM code page 437 (what the official app uses); unknown characters become '?'. */
+    fun toCp437(text: String): ByteArray {
+        val special = mapOf(
+            'Ä' to 0x8E, 'Ö' to 0x99, 'Ü' to 0x9A, 'ä' to 0x84, 'ö' to 0x94, 'ü' to 0x81, 'ß' to 0xE1,
+            'é' to 0x82, 'è' to 0x8A, 'à' to 0x85, 'ç' to 0x87, '♥' to 0x03, '❤' to 0x03, '☺' to 0x01,
+            '★' to 0x0F, '♪' to 0x0D, '°' to 0xF8,
+        )
+        return ByteArray(text.length) { i ->
+            val c = text[i]
+            when {
+                c.code in 0x20..0x7E -> c.code.toByte()
+                c in special -> special.getValue(c).toByte()
+                else -> '?'.code.toByte()
+            }
+        }
+    }
+
     /** Asks for the battery level; the dog answers FF .. 0D <level> .. */
     fun requestBattery() = packet(CMD_BATTERY, 0)
 
@@ -120,4 +169,15 @@ enum class LedTarget(val label: String) {
     RIGHT_EYE("Auge rechts"),
     LEFT_FOOT("Fuß links"),
     RIGHT_FOOT("Fuß rechts"),
+}
+
+/** Games built into the dog (ToyGame enum of the official app). */
+enum class ToyGame(val id: Int, val label: String, val emoji: String, val hint: String) {
+    FORTUNE_TELLER(1, "Wahrsager", "🔮", "Stell Dog-E eine Ja/Nein-Frage!"),
+    CODE_BREAKER(2, "Code knacken", "🔐", "Errate den geheimen Code."),
+    TURBO_PET(3, "Turbo-Streicheln", "⚡", "Streichle so schnell du kannst!"),
+    NOSE_BOOP(4, "Nasen-Stups", "👃", "10 Sekunden: drück die Nase so oft wie möglich!"),
+    RED_LIGHT_GREEN_LIGHT(5, "Ampel-Spiel", "🚦", "Rotes Licht – stopp! Grünes Licht – los!"),
+    BARK_BACK(6, "Bell zurück", "🗣️", "Dog-E bellt vor – mach es nach!"),
+    VET(7, "Tierarzt", "🩺", "Hilf Dog-E, wieder gesund zu werden."),
 }

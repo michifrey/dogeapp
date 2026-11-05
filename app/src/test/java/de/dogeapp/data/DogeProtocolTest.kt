@@ -62,4 +62,16 @@ class DogeProtocolTest {
         assertEquals(87, DogeProtocol.parseBattery(Hex.parse("FF 03 0D 57 67")!!))
         assertEquals(null, DogeProtocol.parseBattery(Hex.parse("FF 03 0A 00 0D")!!))
     }
+
+    @Test
+    fun gamesTailAndMisc() {
+        assertEquals("FF 03 08 04 0F", hex(DogeProtocol.launchGame(ToyGame.NOSE_BOOP)))
+        assertEquals("FF 03 0F 00 12", hex(DogeProtocol.stopSequences()))
+        assertEquals("FF 03 10 00 13", hex(DogeProtocol.sleep()))
+        assertEquals("FF 03 11 00 14", hex(DogeProtocol.requestFirmware()))
+        assertEquals("FF 03 09 02 0E", hex(DogeProtocol.stopTail()))
+        // "HI" = 48 49 -> FF 06 09 00 02 48 49 cs
+        assertEquals("FF 06 09 00 02 48 49 A2", hex(DogeProtocol.tailText("HI")))
+        assertEquals("59 9A 3F", hex(DogeProtocol.toCp437("YÜ€")))
+    }
 }

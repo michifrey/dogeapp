@@ -12,6 +12,7 @@ import de.dogeapp.data.DogeConfig
 import de.dogeapp.data.DogeProtocol
 import de.dogeapp.data.Hex
 import de.dogeapp.data.LedTarget
+import de.dogeapp.data.ToyGame
 import de.dogeapp.net.JokeRepository
 import de.dogeapp.net.WeatherApi
 import de.dogeapp.net.WeatherText
@@ -123,6 +124,52 @@ class DogeViewModel(app: Application) : AndroidViewModel(app) {
         sendRaw(DogeProtocol.motor(DogeProtocol.MOTOR_DRIVE, speedByte and 0xFF))
     }
 
+    /** Big red button: stops motors, running sequences/sounds, the tail animation and any reaction. */
+    fun stopAll() {
+        holdJob?.cancel()
+        reactionJob?.cancel()
+        _driving.value = false
+        sendRaw(DogeProtocol.stopMotors())
+        sendRaw(DogeProtocol.stopSequences())
+        sendRaw(DogeProtocol.stopTail())
+    }
+
+    // ------------------------------------------------------------------ Games, tail, sleep, firmware
+
+    fun launchGame(game: ToyGame) {
+        reactionJob?.cancel()
+        ble.log("Spiel starten: ${game.label}")
+        sendRaw(DogeProtocol.launchGame(game))
+    }
+
+    private val _tailText = MutableStateFlow(
+        app.getSharedPreferences("doge_config", 0).getString("tail_text", "") ?: ""
+    )
+    /** Last message shown on the tail (kept as the text field's initial value). */
+    val tailText: StateFlow<String> = _tailText.asStateFlow()
+
+    fun sendTailText(text: String) {
+        val t = text.trim().take(DogeProtocol.TAIL_TEXT_MAX)
+        if (t.isEmpty()) return
+        _tailText.value = t
+        getApplication<Application>().getSharedPreferences("doge_config", 0).edit().putString("tail_text", t).apply()
+        ble.log("Schwanz-Nachricht: $t")
+        sendRaw(DogeProtocol.tailText(t))
+    }
+
+    fun stopTail() = sendRaw(DogeProtocol.stopTail())
+
+    fun sleepDog() {
+        ble.log("Dog-E schlafen legen")
+        sendRaw(DogeProtocol.sleep())
+    }
+
+    private val _firmware = MutableStateFlow<String?>(null)
+    /** Firmware answer as text (raw bytes, as long as the format is not known). */
+    val firmware: StateFlow<String?> = _firmware.asStateFlow()
+
+    fun requestFirmware() = sendRaw(DogeProtocol.requestFirmware())
+
     // ------------------------------------------------------------------ Battery & volume
 
     private val _battery = MutableStateFlow<Int?>(null)
@@ -148,6 +195,13 @@ class DogeViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun onDogData(data: ByteArray) {
+        if (data.size >= 4 && data[0] == 0xFF.toByte() && data[2].toInt() == DogeProtocol.CMD_FIRMWARE) {
+            val payload = data.copyOfRange(3, data.size - 1)
+            val ascii = payload.filter { it in 32..126 }.map { it.toInt().toChar() }.joinToString("")
+            _firmware.value = if (ascii.length >= 3) ascii else payload.joinToString(".") { (it.toInt() and 0xFF).toString() }
+            ble.log("Firmware: ${_firmware.value}")
+            return
+        }
         DogeProtocol.parseBattery(data)?.let {
             _battery.value = it
             ble.log("Akku: $it")

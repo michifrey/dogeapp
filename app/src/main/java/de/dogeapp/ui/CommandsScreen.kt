@@ -137,6 +137,8 @@ fun SettingsScreen(vm: DogeViewModel, onOpenExplorer: () -> Unit, modifier: Modi
                 )
             }
 
+            DogInfoCard(vm)
+
             ExpertSection(open = expertOpen, onToggle = { expertOpen = !expertOpen }) {
                 ExpertContent(vm, onOpenExplorer)
             }
@@ -451,4 +453,28 @@ private fun ImportDialog(onDismiss: () -> Unit, onImport: (String) -> Boolean) {
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } },
     )
+}
+
+/** Firmware, battery and "go to sleep" for the connected dog. */
+@Composable
+private fun DogInfoCard(vm: DogeViewModel) {
+    val state by vm.ble.state.collectAsStateWithLifecycle()
+    val firmware by vm.firmware.collectAsStateWithLifecycle()
+    val battery by vm.battery.collectAsStateWithLifecycle()
+    val connected = state == de.dogeapp.ble.ConnState.READY
+    // Ask once for the firmware when this card appears with a connected dog.
+    androidx.compose.runtime.LaunchedEffect(connected) { if (connected && firmware == null) vm.requestFirmware() }
+    SectionCard(emoji = "🤖", title = "Über Dog-E", colorIndex = 2) {
+        if (!connected) {
+            Hint("Dog-E ist nicht verbunden.")
+        } else {
+            Text("Akku: ${battery?.let { "$it %" } ?: "unbekannt"}", style = MaterialTheme.typography.bodyLarge)
+            Text("Firmware: ${firmware ?: "wird abgefragt …"}", style = MaterialTheme.typography.bodyLarge)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                InkOutlinedButton(onClick = { vm.requestBattery(); vm.requestFirmware() }) { Text("🔄 Aktualisieren") }
+                InkOutlinedButton(onClick = { vm.sleepDog() }) { Text("😴 Schlafen legen") }
+            }
+            Hint("„Schlafen legen“ schaltet Dog-E in den Stromsparmodus. Aufwecken am Hund selbst.")
+        }
+    }
 }

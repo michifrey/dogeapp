@@ -68,8 +68,15 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.dogeapp.ble.ConnState
 import de.dogeapp.data.DogeConfig
+import androidx.compose.foundation.horizontalScroll
 import de.dogeapp.data.DogeProtocol
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.text.input.ImeAction
+import de.dogeapp.data.ToyGame
 import de.dogeapp.ui.theme.DisplayFont
+import de.dogeapp.ui.theme.ScriptFont
 import de.dogeapp.ui.theme.Ink
 import de.dogeapp.ui.theme.Mustard
 import de.dogeapp.ui.theme.Orange
@@ -138,6 +145,8 @@ fun PlayScreen(vm: DogeViewModel, onConnect: () -> Unit, onOpenSettings: () -> U
             val tricks: @Composable (Dp) -> Unit = { cell -> TricksCard(vm, connected, cell) }
             val talk: @Composable (Dp) -> Unit = { cell -> TalkCard(vm, cell) }
             val volume: @Composable () -> Unit = { VolumeCard(vm) }
+            val games: @Composable (Dp) -> Unit = { cell -> GamesCard(vm, connected, cell) }
+            val tail: @Composable () -> Unit = { TailMessageCard(vm, connected) }
 
             // Short wide screens (phone in landscape) scroll the hero away with the first column.
             val heroOnTop = maxHeight >= 640.dp
@@ -145,23 +154,25 @@ fun PlayScreen(vm: DogeViewModel, onConnect: () -> Unit, onOpenSettings: () -> U
                 width >= 1000.dp -> Column(Modifier.fillMaxSize().padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (heroOnTop) header()
                     Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                        ScrollColumn(Modifier.weight(1f)) { if (!heroOnTop) header(); drive(); volume() }
-                        ScrollColumn(Modifier.weight(1f)) { tricks(150.dp) }
+                        ScrollColumn(Modifier.weight(1f)) { if (!heroOnTop) header(); drive(); tail(); volume() }
+                        ScrollColumn(Modifier.weight(1f)) { tricks(150.dp); games(150.dp) }
                         ScrollColumn(Modifier.weight(1f)) { talk(150.dp) }
                     }
                 }
                 width >= 700.dp -> Column(Modifier.fillMaxSize().padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (heroOnTop) header()
                     Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        ScrollColumn(Modifier.weight(1f)) { if (!heroOnTop) header(); drive(); volume() }
-                        ScrollColumn(Modifier.weight(1.2f)) { tricks(150.dp); talk(150.dp) }
+                        ScrollColumn(Modifier.weight(1f)) { if (!heroOnTop) header(); drive(); tail(); volume() }
+                        ScrollColumn(Modifier.weight(1.2f)) { tricks(150.dp); games(150.dp); talk(150.dp) }
                     }
                 }
                 else -> ScrollColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
                     header()
                     drive()
                     tricks(140.dp)
+                    games(140.dp)
                     talk(140.dp)
+                    tail()
                     volume()
                 }
             }
@@ -369,7 +380,7 @@ private fun DriveCard(vm: DogeViewModel, connected: Boolean, compact: Boolean) {
                 Caption("halten", color = Ink)
             }
         }
-        StopButton(onClick = { vm.driveStop(); feedback.show("✋ Stopp!") })
+        StopButton(onClick = { vm.stopAll(); feedback.show("✋ Alles stopp!") })
     }
 }
 
@@ -592,6 +603,88 @@ private fun VoiceCard(vm: DogeViewModel) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Games built into the dog & messages on the LED tail
+// ---------------------------------------------------------------------------------------------
+
+@Composable
+private fun GamesCard(vm: DogeViewModel, connected: Boolean, minCell: Dp) {
+    val feedback = LocalFeedback.current
+    var selected by rememberSaveable { mutableStateOf<String?>(null) }
+    SectionCard(emoji = "🎮", title = "Spiele", colorIndex = 1) {
+        Caption("Dog-E hat eigene Spiele eingebaut. Antippen und los!")
+        val games = ToyGame.entries.toList()
+        EqualGrid(games, minCellWidth = minCell) { i, g ->
+            ToyTile(
+                emoji = g.emoji,
+                label = g.label,
+                accent = pastel(i + 1),
+                onClick = {
+                    selected = g.name
+                    vm.launchGame(g)
+                    feedback.show(if (connected) "${g.emoji} ${g.label} startet!" else "🔌 Erst Dog-E verbinden")
+                },
+            )
+        }
+        val hint = ToyGame.entries.firstOrNull { it.name == selected }
+        if (hint != null) {
+            Text(
+                "${hint.emoji} ${hint.hint}",
+                fontFamily = ScriptFont,
+                fontSize = 24.sp,
+                color = Orange,
+            )
+        }
+    }
+}
+
+@Composable
+private fun TailMessageCard(vm: DogeViewModel, connected: Boolean) {
+    val feedback = LocalFeedback.current
+    val last by vm.tailText.collectAsStateWithLifecycle()
+    val config by vm.config.collectAsStateWithLifecycle()
+    var text by rememberSaveable(last) { mutableStateOf(last.ifBlank { config.childName.ifBlank { "HALLO" } }) }
+    SectionCard(emoji = "💌", title = "Nachricht auf dem Schwanz", colorIndex = 4) {
+        Caption("Was du hier schreibst, läuft als Leuchtschrift über Dog-Es Schwanz.")
+        OutlinedTextField(
+            value = text,
+            onValueChange = { text = it.take(DogeProtocol.TAIL_TEXT_MAX) },
+            label = { Text("Deine Nachricht") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+            keyboardActions = KeyboardActions(onSend = {
+                vm.sendTailText(text)
+                feedback.show(if (connected) "💌 Nachricht gesendet" else "🔌 Erst Dog-E verbinden")
+            }),
+            supportingText = { Text("${text.length}/${DogeProtocol.TAIL_TEXT_MAX}") },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            PillButton(
+                text = "Auf den Schwanz!",
+                onClick = {
+                    vm.sendTailText(text)
+                    feedback.show(if (connected) "💌 Nachricht gesendet" else "🔌 Erst Dog-E verbinden")
+                },
+                enabled = text.isNotBlank(),
+                trailing = "✨",
+                modifier = Modifier.weight(1f),
+            )
+            InkTextButton("Aus", onClick = { vm.stopTail() })
+        }
+        // Quick ideas for kids who don't want to type.
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("ICH ♥ DICH", "WUFF!", "HALLO ${config.childName.uppercase()}".trim()).forEach { idea ->
+                InkTextButton(idea, onClick = {
+                    text = idea
+                    vm.sendTailText(idea)
+                    feedback.show("💌 $idea")
+                })
+            }
         }
     }
 }
